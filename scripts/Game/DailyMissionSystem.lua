@@ -365,4 +365,209 @@ function DailyMissionSystem.ResetForTesting(uid)
     loaded_[uid] = false
 end
 
+-- ============================================================================
+-- v1.1.0 新增：周任务系统
+-- ============================================================================
+
+local weeklyMissions_ = {}  -- 周任务数据
+
+--- 获取本周标识（基于周一刷新机制）
+local function _GetWeekString()
+    if not os or not os.time then
+        return "2026-W25"
+    end
+    local now = os.time()
+    local t = os.date("*t", now)
+    -- 计算是今年的第几周
+    local yearStart = os.time({ year = t.year, month = 1, day = 1, hour = 0 })
+    local daysPassed = math.floor((now - yearStart) / (24 * 60 * 60))
+    local weekNum = math.floor(daysPassed / 7) + 1
+    return string.format("%04d-W%02d", t.year, weekNum)
+end
+
+--- 获取玩家周任务数据
+local function _GetWeeklyData(uid)
+    if not Config.WeeklyMissions then
+        return nil
+    end
+
+    if not weeklyMissions_[uid] then
+        weeklyMissions_[uid] = {
+            week = _GetWeekString(),
+            missions = {},
+            stats = {
+                game_wins = 0,
+                items_collected = 0,
+                skills_used = 0
+            }
+        }
+        for _, m in ipairs(Config.WeeklyMissions.Missions) do
+            weeklyMissions_[uid].missions[m.id] = {
+                progress = 0,
+                claimed = false
+            }
+        end
+    end
+
+    -- 自动周刷新
+    if weeklyMissions_[uid].week ~= _GetWeekString() then
+        weeklyMissions_[uid] = {
+            week = _GetWeekString(),
+            missions = {},
+            stats = {
+                game_wins = 0,
+                items_collected = 0,
+                skills_used = 0
+            }
+        }
+        for _, m in ipairs(Config.WeeklyMissions.Missions) do
+            weeklyMissions_[uid].missions[m.id] = {
+                progress = 0,
+                claimed = false
+            }
+        end
+        print("[WeeklyMission] Week refreshed for uid=" .. tostring(uid))
+    end
+
+    return weeklyMissions_[uid]
+end
+
+--- 触发周任务进度更新（在游戏/技能/收集时调用）
+function DailyMissionSystem.UpdateWeeklyProgress(uid, trigger)
+    if not Config.WeeklyMissions then return {} end
+    local data = _GetWeeklyData(uid)
+    if not data then return {} end
+
+    local statMap = {
+        ["game_win"]     = "game_wins",
+        ["item_collect"] = "items_collected",
+        ["skill_use"]    = "skills_used"
+    }
+    local statKey = statMap[trigger]
+    if not statKey then return {} end
+
+    data.stats[statKey] = (data.stats[statKey] or 0) + 1
+
+    -- 更新对应任务进度
+    local newCompleted = {}
+    for _, mission in ipairs(Config.WeeklyMissions.Missions) do
+        if mission.trigger == trigger then
+            local missionState = data.missions[mission.id]
+            if missionState and not missionState.claimed then
+                local old = missionState.progress
+                missionState.progress = math.min(
+                    data.stats[statKey] or 0,
+                    mission.target
+                )
+                if old < mission.target and missionState.progress >= mission.target then
+                    table.insert(newCompleted, {
+                        id = mission.id,
+                        name = mission.name,
+                        reward = mission.reward
+                    })
+                    print("[WeeklyMission] Completed: " .. mission.name .. " (uid=" .. tostring(uid) .. ")")
+                end
+            end
+        end
+    end
+    return newCompleted
+end
+
+--- 获取周任务列表
+function DailyMissionSystem.GetWeeklyMissionList(uid)
+    if not Config.WeeklyMissions then return {} end
+    local data = _GetWeeklyData(uid)
+    if not data then return {} end
+
+    local list = {}
+    for _, mission in ipairs(Config.WeeklyMissions.Missions) do
+        local state = data.missions[mission.id] or {}
+        table.insert(list, {
+            id = mission.id,
+            name = mission.name,
+            desc = mission.desc,
+            target = mission.target,
+            progress = state.progress or 0,
+            completed = (state.progress or 0) >= mission.target,
+            claimed = state.claimed or false,
+            reward = mission.reward
+        })
+    end
+    return list
+end
+
+--- 领取周任务奖励
+function DailyMissionSystem.ClaimWeeklyReward(uid, missionId)
+    if not Config.WeeklyMissions then return false, nil end
+    local data = _GetWeeklyData(uid)
+    if not data then return false, nil end
+
+    local missionState = data.missions[missionId]
+    if not missionState or missionState.claimed then
+        return false, nil
+    end
+
+    -- 查找任务配置
+    local missionConfig = nil
+    for _, m in ipairs(Config.WeeklyMissions.Missions) do
+        if m.id == missionId then
+            missionConfig = m
+            break
+        end
+    end
+
+    if not missionConfig or (missionState.progress or 0) < missionConfig.target then
+        return false, nil
+    end
+
+    missionState.claimed = true
+    print("[WeeklyMission] Reward claimed: " .. missionConfig.name .. " (" .. tostring(missionConfig.reward) .. " gold) (uid=" .. tostring(uid) .. ")")
+
+    return true, {
+        name = missionConfig.name,
+        reward = missionConfig.reward
+    }
+end
+
+--- 一键领取所有周任务奖励
+function DailyMissionSystem.ClaimAllWeeklyRewards(uid)
+    if not Config.WeeklyMissions then return {} end
+    local claimed = {}
+    for _, m in ipairs(Config.WeeklyMissions.Missions) do
+        local ok, reward = DailyMissionSystem.ClaimWeeklyReward(uid, m.id)
+        if ok and reward then
+            table.insert(claimed, reward)
+        end
+    end
+    return claimed
+end
+
+--- 注册事件监听（与 EventBus 集成）
+function DailyMissionSystem.RegisterEvents()
+    local ok, EventBus = pcall(require, "Utils.EventBus")
+    if not ok or not EventBus then return end
+
+    EventBus.Subscribe(EventBus.Events.GAME_END, function(data)
+        if not data then return end
+        local uid = data.playerId or data.uid or data.seat
+        if data.isWinner or data.winner then
+            DailyMissionSystem.UpdateWeeklyProgress(uid, "game_win")
+        end
+    end, "DailyMissionSystem")
+
+    EventBus.Subscribe(EventBus.Events.ITEM_COLLECT, function(data)
+        if not data then return end
+        local uid = data.playerId or data.uid or data.seat
+        DailyMissionSystem.UpdateWeeklyProgress(uid, "item_collect")
+    end, "DailyMissionSystem")
+
+    EventBus.Subscribe(EventBus.Events.SKILL_USE, function(data)
+        if not data then return end
+        local uid = data.playerId or data.uid or data.seat
+        DailyMissionSystem.UpdateWeeklyProgress(uid, "skill_use")
+    end, "DailyMissionSystem")
+
+    print("[DailyMissionSystem] EventBus listeners registered (weekly + daily)")
+end
+
 return DailyMissionSystem

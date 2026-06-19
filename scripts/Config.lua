@@ -319,4 +319,216 @@ Config.Animations = {
     ToastFast      = 1.0,    -- 快速 Toast
 }
 
+-- ============================================================================
+-- v1.1.0 新增：赛季系统配置
+-- ============================================================================
+Config.Seasons = {
+    Name           = "第一赛季·初露锋芒",
+    StartDate      = "2026-06-19",
+    DurationDays   = 14,       -- 每赛季 14 天
+    MaxLevel       = 50,       -- 最高 50 级
+    BaseExpPerLevel = 100,     -- 第 1 级升级所需基础经验
+    ExpGrowthFactor = 1.2,     -- 每级经验递增系数
+    ExpPerWin      = 50,       -- 胜利获得经验
+    ExpPerLose     = 20,       -- 失败获得经验
+    ExpPerItem     = 10,       -- 获得藏品基础经验
+    ExpPerSkill    = 5,        -- 使用技能获得经验
+
+    -- 赛季奖励表（每 5 级一个关键奖励点）
+    Rewards = {
+        [1]  = { type = "gold",  amount = 100,  name = "新手礼包" },
+        [5]  = { type = "gold",  amount = 300,  name = "成长奖励" },
+        [10] = { type = "gold",  amount = 500,  name = "小有所成" },
+        [15] = { type = "item",  rarity = 2,    name = "稀有藏品" },
+        [20] = { type = "gold",  amount = 1000, name = "经验丰富" },
+        [25] = { type = "title", id = "T001",   name = "竞拍达人" },
+        [30] = { type = "gold",  amount = 2000, name = "精英收藏家" },
+        [35] = { type = "item",  rarity = 3,    name = "史诗藏品" },
+        [40] = { type = "gold",  amount = 5000, name = "大师级别" },
+        [45] = { type = "title", id = "T002",   name = "传奇收藏家" },
+        [50] = { type = "item",  rarity = 4,    name = "传说藏品" }
+    },
+
+    -- 赛季专属成就（与 AchievementSystem 集成）
+    SeasonalAchievements = {
+        { id = "season_max_level", name = "赛季满级",   desc = "在任一赛季达到 50 级", reward = 2000 },
+        { id = "season_games_20",  name = "赛季活跃",   desc = "在任一赛季参与 20 场", reward = 500 },
+        { id = "season_wins_10",   name = "赛季胜利",   desc = "在任一赛季获胜 10 场", reward = 800 }
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 新增：周任务系统配置
+-- ============================================================================
+Config.WeeklyMissions = {
+    RefreshDay     = 1,         -- 每周一刷新（1=周一，7=周日）
+    MissionCount   = 3,         -- 每周 3 个任务
+    BonusMultiplier = 1.5,      -- 奖励倍率（比每日任务更高）
+
+    Missions = {
+        {
+            id = "weekly_wins_5",
+            name = "周胜场目标",
+            desc = "本周累计获得 5 场胜利",
+            target = 5,
+            reward = 1000,
+            trigger = "game_win"
+        },
+        {
+            id = "weekly_items_10",
+            name = "收藏家挑战",
+            desc = "本周累计获得 10 件藏品",
+            target = 10,
+            reward = 800,
+            trigger = "item_collect"
+        },
+        {
+            id = "weekly_skills_20",
+            name = "技能大师",
+            desc = "本周累计使用 20 次技能",
+            target = 20,
+            reward = 500,
+            trigger = "skill_use"
+        }
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 新增：限时活动模式配置
+-- ============================================================================
+Config.EventModes = {
+    BlindRush = {
+        Name         = "极速竞拍",
+        Description  = "快节奏的 3 轮暗拍，时间紧迫但奖励丰厚！",
+        Rounds       = 3,          -- 仅 3 轮
+        BidTimeLimit = 10,         -- 每轮 10 秒出价
+        InitialFunds = 5000,       -- 初始资金
+        Enabled      = true,
+        TimeWindow   = { 20, 22 }, -- 每日 20:00 - 22:00
+        RewardBonus  = 2.0,        -- 奖励倍率
+        BonusExp     = 100         -- 额外赛季经验
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 新增：好友系统配置
+-- ============================================================================
+Config.Friends = {
+    MaxFriends     = 50,        -- 最大好友数
+    OnlineTimeout  = 300,       -- 5 分钟无活动视为离线
+    InviteExpire   = 86400,     -- 邀请 24 小时过期
+    FriendBonus    = 10         -- 与好友游戏的额外奖励
+}
+
+-- ============================================================================
+-- v1.1.0 新增：本地排行榜配置
+-- ============================================================================
+Config.Leaderboards = {
+    UpdateInterval = 300,       -- 每 5 分钟更新
+    MaxEntries     = 100,       -- 每个排行榜最多 100 条
+
+    Boards = {
+        { id = "wins",      name = "胜场榜",   desc = "累计胜场数排名" },
+        { id = "winrate",   name = "胜率榜",   desc = "游戏胜率排名" },
+        { id = "items",     name = "收藏榜",   desc = "获得藏品总价值" },
+        { id = "games",     name = "参与榜",   desc = "参与游戏次数" },
+        { id = "seasonExp", name = "赛季榜",   desc = "当前赛季经验值" }
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 新增：角色合作被动配置
+-- ============================================================================
+Config.CharacterSynergies = {
+    {
+        chars    = { 1, 2 },       -- 角色 1 + 角色 2
+        name     = "经典组合",
+        desc     = "双方余额 +500",
+        effect   = { type = "balance", amount = 500 }
+    },
+    {
+        chars    = { 9, 11 },      -- 神秘收藏家 + 心理学家
+        name     = "情报网",
+        desc     = "信息精度 +10%",
+        effect   = { type = "info_precision", amount = 0.1 }
+    },
+    {
+        chars    = { 3, 5 },
+        name     = "策略大师",
+        desc     = "每轮额外 +200 余额",
+        effect   = { type = "per_round_balance", amount = 200 }
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 新增：玩家头像与个性化配置
+-- ============================================================================
+Config.Profiles = {
+    DefaultAvatar  = "A001",
+
+    Avatars = {
+        { id = "A001", name = "新手玩家",   unlocked = true,   image = "default" },
+        { id = "A002", name = "竞拍达人",   unlocked = false,  requireAchievement = "ach_first_win" },
+        { id = "A003", name = "收藏家",     unlocked = false,  requireAchievement = "collect_items_100" },
+        { id = "A004", name = "神秘人",     unlocked = false,  requireSeasonLevel = 10 },
+        { id = "A005", name = "传奇猎手",   unlocked = false,  requireSeasonLevel = 30 },
+        { id = "A006", name = "大师",       unlocked = false,  requireSeasonLevel = 50 }
+    },
+
+    Titles = {
+        { id = "T001", name = "竞拍达人",   desc = "赛季达到 25 级" },
+        { id = "T002", name = "传奇收藏家", desc = "赛季达到 45 级" },
+        { id = "T003", name = "不败神话",   desc = "单场连胜 10 场" },
+        { id = "T004", name = "史诗猎人",   desc = "获得 50 件史诗以上藏品" }
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 新增：藏品套装收集配置
+-- ============================================================================
+Config.ItemSets = {
+    {
+        id = "set_eastern",
+        name = "东方艺术系列",
+        description = "集齐东方艺术品系列藏品",
+        itemCount = 10,
+        reward = { type = "gold", amount = 5000 }
+    },
+    {
+        id = "set_western",
+        name = "西洋收藏系列",
+        description = "集齐西洋收藏系列藏品",
+        itemCount = 10,
+        reward = { type = "gold", amount = 5000 }
+    },
+    {
+        id = "set_rare",
+        name = "稀有收藏",
+        description = "收集 100 件稀有以上（含）藏品",
+        itemCount = 100,
+        minRarity = 2,
+        reward = { type = "title", id = "T005" }
+    }
+}
+
+-- ============================================================================
+-- v1.1.0 版本信息更新
+-- ============================================================================
+Config.Version = "1.1.0"
+Config.ReleaseDate = "2026-07-19"
+Config.ReleaseNotes = [=[
+v1.1.0 主要更新：
+  · 全新赛季系统（14 天周期，50 级通行证）
+  · 周挑战任务（3 个任务，奖励更丰厚）
+  · 新角色 ×4（神秘收藏家、风险投资人、心理学家、时间管理大师）
+  · 角色合作被动机制
+  · 藏品扩展 +100 件 + 2 个主题系列
+  · 限时活动模式：Blind Rush 极速竞拍
+  · 好友系统：在线状态、邀请组队
+  · 本地排行榜：5 种排名维度
+  · 玩家头像与称号系统
+  · UI/UX 优化：动画增强 + 布局调整
+  · 架构优化：EventBus + SystemManager 统一管理
+]=]
+
 return Config
