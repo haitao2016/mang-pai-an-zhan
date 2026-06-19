@@ -4,7 +4,7 @@
 >
 > 创建时间: 2026-05-17
 > 更新时间: 2026-06-19
-> 状态: **v1.1.0 开发完成，待测试发布**
+> 状态: **v1.1.0 开发完成，测试准备阶段**
 
 ---
 
@@ -419,16 +419,98 @@ scripts/
 | `Config.lua` | 更新 | v0.1.0 → v1.0.0，增加成就/每日任务/动画时长配置 |
 | `project.json` | 更新 | 更新发布描述、标题、游戏特色，加入成就系统说明 |
 | `scripts/Game/AchievementSystem.lua` | 新增 | 10 个成就系统，服务端持久化 |
-| `scripts/Game/DailyMissionSystem.lua` | 新增 | 4 个每日任务，每日自动刷新 |
+| `scripts/Game/DailyMissionSystem.lua` | 更新 | 4 个每日任务 + 3 个周任务，每日/每周刷新 |
+| `scripts/Game/SeasonSystem.lua` | 新增 | 赛季系统（14 天、50 级通行证、奖励领取） |
+| `scripts/Game/FriendSystem.lua` | 新增 | 好友系统（添加/删除、在线状态、邀请） |
+| `scripts/Game/LeaderboardSystem.lua` | 新增 | 本地排行榜（5 种排名维度） |
+| `scripts/Game/ProfileSystem.lua` | 新增 | 玩家头像与个性化（称号系统） |
+| `scripts/Game/ItemSetSystem.lua` | 新增 | 藏品套装系统（东方艺术/西洋收藏/稀有收藏） |
+| `scripts/Game/EventModeSystem.lua` | 新增 | 限时活动模式（Blind Rush 极速竞拍） |
+| `scripts/Game/RoomSystem.lua` | 新增 | 自定义房间系统（创建/邀请/规则定制） |
+| `scripts/Game/SystemManager.lua` | 新增 | 系统统一管理器（初始化/依赖管理） |
+| `scripts/Utils/EventBus.lua` | 新增 | 事件总线（18 种标准事件，发布-订阅模式） |
 | `scripts/Utils/TutorialManager.lua` | 更新 | 扩展教程步骤，增加角色/拍卖厅说明 |
 | `scripts/Utils/AntiCheat.lua` | 更新 | 增强伪随机检测、刷分检测、延迟抖动检测 |
-| `scripts/Utils/UIUtils.lua` | 新增 | UI 美化工具，颜色/动画/文本格式化 |
-| `scripts/UI/GameUI.lua` | 更新 | 集成 UIUtils，统一视觉风格 |
+| `scripts/Utils/UIUtils.lua` | 更新 | UI 美化工具，颜色/动画/文本格式化 + v1.1 增强 |
+| `scripts/UI/GameUI.lua` | 更新 | 集成 UIUtils，统一视觉风格 + 新增面板入口 |
 | `docs/dev-plan.md` | 更新 | 更新 v1.0 发布记录、版本信息 |
 
 ---
 
-## 测试覆盖
+## v1.1.0 版本开发记录
+
+### 开发周期
+- **开始日期**：2026-06-19
+- **预计完成日期**：2026-07-19
+- **开发状态**：✅ **开发完成，测试准备阶段**
+
+### 新增系统总览
+
+| # | 系统 | 优先级 | 状态 | 核心功能 |
+|---|------|--------|------|---------|
+| 1 | EventBus | 高 | ✅ | 18 种标准事件，发布-订阅模式 |
+| 2 | SystemManager | 高 | ✅ | 统一初始化，依赖管理 |
+| 3 | SeasonSystem | 高 | ✅ | 14 天赛季，50 级通行证 |
+| 4 | DailyMissionSystem | 高 | ✅ | 每日 + 周任务，EventBus 集成 |
+| 5 | CharacterData | 高 | ✅ | 4 个新角色（9-12） |
+| 6 | CharacterSystem | 高 | ✅ | 合作被动机制（3 种组合） |
+| 7 | ItemSetSystem | 中 | ✅ | 套装收集（3 种） |
+| 8 | EventModeSystem | 中 | ✅ | Blind Rush 限时活动 |
+| 9 | FriendSystem | 中 | ✅ | 好友列表，在线状态，邀请 |
+| 10 | LeaderboardSystem | 低 | ✅ | 5 种排行榜 |
+| 11 | ProfileSystem | 低 | ✅ | 头像，称号，昵称 |
+| 12 | RoomSystem | 低 | ✅ | 自定义房间，邀请，规则 |
+| 13 | GameUI 集成 | 中 | ✅ | 6 个新面板入口 |
+| 14 | UIUtils 增强 | 低 | ✅ | 9 个新辅助函数 |
+
+### 新角色一览（9-12）
+
+| ID | 名称 | 主动技能 | 被动技能 |
+|----|------|---------|---------|
+| 9 | 神秘收藏家「洞察」 | 价格预知 | 从容不迫 |
+| 10 | 风险投资人「豪赌」 | 孤注一掷 | 利润分成 |
+| 11 | 心理学家「读心」 | 读心术 | 反制之盾 |
+| 12 | 时间管理大师「时停」 | 时间膨胀 | 时间回溯 |
+
+### 合作被动组合
+
+| 组合 | 角色 | 效果 |
+|------|------|------|
+| 经典组合 | 角色 1 + 2 | 双方余额 +500 |
+| 情报网 | 角色 9 + 11 | 信息精度 +10% |
+| 策略大师 | 角色 3 + 5 | 每轮额外 +200 余额 |
+
+### UI 面板入口（GameUI.lua）
+
+| 菜单图标 | 名称 | 面板函数 |
+|---------|------|---------|
+| 📋 | 每日任务 | `_ShowMissions()` |
+| 🏆 | 赛季 | `_ShowSeason()` |
+| 👥 | 好友 | `_ShowFriends()` |
+| 👤 | 个人 | `_ShowProfile()` |
+
+### 测试用例覆盖
+
+| 测试文件 | 用例数 | 覆盖范围 |
+|---------|--------|---------|
+| `TestSeasonSystem.lua` | 9 | 赛季 ID，经验，奖励 |
+| `TestFriendSystem.lua` | 12 | 添加/删除，邀请，在线 |
+| `TestEventBus.lua` | 11 | 订阅/发布，优先级，历史 |
+
+### v1.1.0 vs v1.0.0 对比
+
+| 维度 | v1.0.0 | v1.1.0 | 增长 |
+|------|--------|--------|------|
+| 核心系统 | 11 | **23** | +12 |
+| 角色数 | 8 | **12** | +4 |
+| 成就数 | 10 | **13** | +3 |
+| 任务系统 | 每日 4 个 | **每日 4 + 每周 3** | +3 |
+| 社交系统 | 无 | **完整** | 从无到有 |
+| 总代码行数 | ~3000 | **~8000** | +167% |
+
+---
+
+## v1.0.0 版本发布说明测试覆盖
 
 | 模块 | 测试文件 | 用例数 |
 |------|----------|--------|

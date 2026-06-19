@@ -1241,6 +1241,291 @@ function GameUI._ShowCollection()
     end
 end
 
+-- ============================================================================
+-- v1.1.0 新增：任务与赛季面板
+-- ============================================================================
+
+function GameUI._ShowMissions()
+    -- 动态加载系统
+    local DailyMission = safeRequire("Game.DailyMissionSystem")
+    if not DailyMission then
+        GameUI._ShowToast("系统加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    -- 创建任务面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "📋 每日任务 & 周挑战",
+                fontSize = 18, fontColor = rgba(C.TextPrimary),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 每日任务区域
+            UI.Label {
+                text = "── 每日任务 ──",
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 10, marginLeft = 20
+            },
+            -- 周任务区域
+            UI.Label {
+                text = "── 周挑战任务 ──",
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 10, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowLobby()
+                end
+            }
+        }
+    }
+
+    -- 缓存面板
+    if not GameUI._missionsPanel then
+        GameUI._missionsPanel = panel
+        root_:AddChild(panel)
+    else
+        panel:Hide()
+        GameUI._missionsPanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "任务中心"
+
+    -- 获取任务数据
+    local playerId = client_ and client_.playerId_ or "default"
+    local dailyList = DailyMission.GetDailyMissionList(playerId)
+    local weeklyList = DailyMission.GetWeeklyMissionList(playerId)
+
+    GameUI._ShowToast(
+        string.format("每日任务: %d/%d | 周任务: %d/%d",
+            #dailyList, 4, #weeklyList, 3),
+        "INFO"
+    )
+end
+
+function GameUI._ShowSeason()
+    local SeasonSystem = safeRequire("Game.SeasonSystem")
+    if not SeasonSystem then
+        GameUI._ShowToast("赛季系统加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    -- 获取赛季状态
+    local playerId = client_ and client_.playerId_ or "default"
+    local status = SeasonSystem.GetPlayerStatus(playerId)
+    local remaining = SeasonSystem.GetSeasonTimeRemaining()
+
+    -- 创建赛季面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 赛季标题
+            UI.Label {
+                text = "🏆 " .. (status and status.seasonName or "赛季"),
+                fontSize = 20, fontColor = rgba(C.Accent),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 等级信息
+            UI.Label {
+                text = string.format("等级: %d / %d",
+                    status and status.level or 1,
+                    status and status.maxLevel or 50),
+                fontSize = 14, fontColor = rgba(C.TextPrimary),
+                marginTop = 10, marginLeft = 20
+            },
+            -- 进度条
+            UI.Panel {
+                width = 300, height = 16,
+                backgroundColor = rgba({60, 60, 60}, 255),
+                borderRadius = 8,
+                marginTop = 8, marginLeft = 20,
+                children = {
+                    UI.Panel {
+                        width = (status and status.progressPercent or 0) .. "%",
+                        height = "100%",
+                        backgroundColor = rgba(C.Accent, 200),
+                        borderRadius = 8
+                    }
+                }
+            },
+            -- 剩余时间
+            UI.Label {
+                text = "⏰ 剩余: " .. SeasonSystem.FormatTimeRemaining(remaining),
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowLobby()
+                end
+            }
+        }
+    }
+
+    if not GameUI._seasonPanel then
+        GameUI._seasonPanel = panel
+        root_:AddChild(panel)
+    else
+        panel:Hide()
+        GameUI._seasonPanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "赛季中心"
+end
+
+function GameUI._ShowFriends()
+    local FriendSystem = safeRequire("Game.FriendSystem")
+    if not FriendSystem then
+        GameUI._ShowToast("好友系统加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    local playerId = client_ and client_.playerId_ or "default"
+    local friends = FriendSystem.GetFriends(playerId)
+    local onlineCount = FriendSystem.GetOnlineFriendCount(playerId)
+    local totalCount = FriendSystem.GetFriendCount(playerId)
+
+    -- 创建好友面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "👥 好友列表",
+                fontSize = 18, fontColor = rgba(C.TextPrimary),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 在线状态
+            UI.Label {
+                text = string.format("在线: %d / %d", onlineCount, totalCount),
+                fontSize = 12, fontColor = rgba({80, 200, 80}),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 好友列表区域
+            UI.Label {
+                text = "好友功能开发中...",
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowLobby()
+                end
+            }
+        }
+    }
+
+    if not GameUI._friendsPanel then
+        GameUI._friendsPanel = panel
+        root_:AddChild(panel)
+    else
+        panel:Hide()
+        GameUI._friendsPanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "好友中心"
+end
+
+function GameUI._ShowProfile()
+    local ProfileSystem = safeRequire("Game.ProfileSystem")
+    if not ProfileSystem then
+        GameUI._ShowToast("个人中心加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    local playerId = client_ and client_.playerId_ or "default"
+    local profile = ProfileSystem.GetProfile(playerId)
+    local avatars = ProfileSystem.GetAllAvatars(playerId)
+    local titles = ProfileSystem.GetAllTitles(playerId)
+
+    -- 创建个人面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "👤 个人中心",
+                fontSize = 18, fontColor = rgba(C.TextPrimary),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 昵称
+            UI.Label {
+                text = "昵称: " .. (profile and profile.nickname or "未设置"),
+                fontSize = 14, fontColor = rgba(C.TextPrimary),
+                marginTop = 10, marginLeft = 20
+            },
+            -- 称号
+            UI.Label {
+                text = "称号: " .. (profile and profile.title and profile.title.name or "无"),
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 头像数
+            UI.Label {
+                text = string.format("已解锁头像: %d / %d",
+                    profile and profile.avatarCount or 1,
+                    avatars and #avatars or 6),
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowLobby()
+                end
+            }
+        }
+    }
+
+    if not GameUI._profilePanel then
+        GameUI._profilePanel = panel
+        root_:AddChild(panel)
+    else
+        panel:Hide()
+        GameUI._profilePanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "个人中心"
+end
+
 function GameUI._ShowCharSelect()
     GameUI._HideAllPanels()
     charSelectPanel_:Show()
@@ -2095,6 +2380,10 @@ function GameUI._BuildHallSelectPanel()
     local menuItems = {
         { icon = "🔨", label = "拍卖大厅", active = true },
         { icon = "🏛️", label = "收藏馆",   action = "collection" },
+        { icon = "📋", label = "每日任务", action = "missions", badge = true },     -- v1.1.0
+        { icon = "🏆", label = "赛季",     action = "season", badge = true },       -- v1.1.0
+        { icon = "👥", label = "好友",     action = "friends" },                    -- v1.1.0
+        { icon = "👤", label = "个人",     action = "profile" },                  -- v1.1.0
         { icon = "🔙", label = "返回大厅", action = "lobby" },
     }
     local menuChildren = {}
@@ -2113,6 +2402,14 @@ function GameUI._BuildHallSelectPanel()
             onClick = function()
                 if item.action == "collection" then
                     GameUI._ShowCollection()
+                elseif item.action == "missions" then        -- v1.1.0
+                    GameUI._ShowMissions()
+                elseif item.action == "season" then         -- v1.1.0
+                    GameUI._ShowSeason()
+                elseif item.action == "friends" then        -- v1.1.0
+                    GameUI._ShowFriends()
+                elseif item.action == "profile" then       -- v1.1.0
+                    GameUI._ShowProfile()
                 elseif item.action == "lobby" then
                     GameUI._ShowLobby()
                 end
