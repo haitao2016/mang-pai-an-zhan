@@ -5,9 +5,29 @@
 -- ============================================================================
 
 local Config = require("Config")
+local EventBus = require("Utils.EventBus")
 local cjson  = require("cjson")
 
 local AchievementSystem = {}
+
+-- ============================================================================
+-- v1.3 成就等级与类别定义
+-- ============================================================================
+AchievementSystem.Levels = {
+    { id = "copper",   name = "铜",  color = "#CD7F32", icon = "🥉" },
+    { id = "silver",   name = "银",  color = "#C0C0C0", icon = "🥈" },
+    { id = "gold",     name = "金",  color = "#FFD700", icon = "🥇" },
+    { id = "platinum", name = "铂金", color = "#E5E4E2", icon = "⭐" },
+    { id = "diamond",  name = "钻石", color = "#B9F2FF", icon = "💎" },
+}
+
+AchievementSystem.Categories = {
+    { id = "competition", name = "竞技", icon = "🏆" },
+    { id = "social",      name = "社交", icon = "👥" },
+    { id = "collection",  name = "收集", icon = "📦" },
+    { id = "growth",      name = "成长", icon = "📈" },
+    { id = "special",     name = "特殊", icon = "🎯", hidden = false },
+}
 
 -- ============================================================================
 -- 成就定义
@@ -44,6 +64,19 @@ local function _GetStats(uid)
             hall_victory = {},       -- 各厅获胜记录 { "hall_beginner" = true, ... }
             collection_value = 0,    -- 累计收藏价值
             skill_uses = 0,          -- 技能使用次数
+            -- v1.3 扩展统计字段
+            auction_count = 0,       -- 拍卖次数
+            win_streak = 0,          -- 当前连胜
+            max_win_streak = 0,      -- 历史最高连胜
+            lose_streak = 0,         -- 当前连败
+            tournament_wins = 0,     -- 锦标赛胜场
+            team_battle_count = 0,   -- 团队战次数
+            guild_contribution = 0,  -- 公会贡献值累计
+            skin_unlocks = 0,        -- 皮肤解锁数
+            total_gold = 0,          -- 累计获得金币
+            login_days = 1,          -- 累计登录天数
+            total_balance = 0,       -- 累计最终余额（正收益总和）
+            perfect_rounds = 0,      -- 完美回合（排名第一的次数）
         }
     end
     return stats_[uid]
@@ -154,13 +187,24 @@ function AchievementSystem.RecordVictory(uid, hallId, finalBalance, initialFunds
     stats.win_count = stats.win_count + 1
     stats.game_count = stats.game_count + 1
 
+    -- 连胜/连败
+    stats.win_streak = stats.win_streak + 1
+    stats.lose_streak = 0
+    if stats.win_streak > stats.max_win_streak then
+        stats.max_win_streak = stats.win_streak
+    end
+
     if hallId then
         stats.hall_victory[hallId] = true
     end
 
     -- 计算正收益
-    if finalBalance and initialFunds and finalBalance > initialFunds then
-        stats.positive_gain = stats.positive_gain + 1
+    if finalBalance and initialFunds then
+        if finalBalance > initialFunds then
+            stats.positive_gain = stats.positive_gain + 1
+            stats.total_balance = stats.total_balance + (finalBalance - initialFunds)
+        end
+        stats.total_gold = stats.total_gold + math.max(0, finalBalance - initialFunds)
     end
 
     return AchievementSystem._CheckAllAchievements(uid)
@@ -171,6 +215,8 @@ end
 function AchievementSystem.RecordGameEnd(uid)
     local stats = _GetStats(uid)
     stats.game_count = stats.game_count + 1
+    stats.lose_streak = stats.lose_streak + 1
+    stats.win_streak = 0
     return AchievementSystem._CheckAllAchievements(uid)
 end
 
@@ -204,16 +250,20 @@ end
 function AchievementSystem.RecordBidRanks(uid, rankList)
     local stats = _GetStats(uid)
     local top2Count = 0
+    local perfectCount = 0
     for _, rank in ipairs(rankList) do
         if rank <= 2 then
             top2Count = top2Count + 1
         end
+        if rank == 1 then
+            perfectCount = perfectCount + 1
+        end
     end
 
-    -- 只记录最高的一次（单局成就），如果已有更高则不覆盖
     if top2Count > stats.top2_rounds then
         stats.top2_rounds = top2Count
     end
+    stats.perfect_rounds = stats.perfect_rounds + perfectCount
 
     return AchievementSystem._CheckAllAchievements(uid)
 end
@@ -223,6 +273,73 @@ end
 function AchievementSystem.RecordSkillUse(uid)
     local stats = _GetStats(uid)
     stats.skill_uses = stats.skill_uses + 1
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+-- ============================================================================
+-- v1.3 新增记录接口
+-- ============================================================================
+
+--- 记录一次拍卖
+---@param uid number
+function AchievementSystem.RecordAuction(uid)
+    local stats = _GetStats(uid)
+    stats.auction_count = stats.auction_count + 1
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录锦标赛胜利
+---@param uid number
+---@param tournamentId string
+function AchievementSystem.RecordTournamentWin(uid, tournamentId)
+    local stats = _GetStats(uid)
+    stats.tournament_wins = stats.tournament_wins + 1
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录团队战
+---@param uid number
+---@param isWin boolean 是否胜利
+function AchievementSystem.RecordTeamBattle(uid, isWin)
+    local stats = _GetStats(uid)
+    stats.team_battle_count = stats.team_battle_count + 1
+    if isWin then
+        return AchievementSystem._CheckAllAchievements(uid)
+    end
+    return {}
+end
+
+--- 记录公会贡献
+---@param uid number
+---@param amount number 贡献值
+function AchievementSystem.RecordGuildContribution(uid, amount)
+    local stats = _GetStats(uid)
+    stats.guild_contribution = stats.guild_contribution + (amount or 0)
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录皮肤解锁
+---@param uid number
+function AchievementSystem.RecordSkinUnlock(uid)
+    local stats = _GetStats(uid)
+    stats.skin_unlocks = stats.skin_unlocks + 1
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录登录
+---@param uid number
+function AchievementSystem.RecordLogin(uid)
+    local stats = _GetStats(uid)
+    stats.login_days = stats.login_days + 1
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录金币获得
+---@param uid number
+---@param amount number
+function AchievementSystem.RecordGoldObtained(uid, amount)
+    local stats = _GetStats(uid)
+    stats.total_gold = stats.total_gold + (amount or 0)
     return AchievementSystem._CheckAllAchievements(uid)
 end
 
@@ -237,19 +354,40 @@ function AchievementSystem._CheckAllAchievements(uid)
     local unlocked = _GetUnlocked(uid)
     local stats = _GetStats(uid)
     local newlyUnlocked = {}
+    local events = Config.Achievements
 
-    for _, achievement in ipairs(Config.Achievements) do
+    if not events or #events == 0 then
+        return newlyUnlocked
+    end
+
+    for _, achievement in ipairs(events) do
         if not unlocked[achievement.id] then
             local ok = AchievementSystem._CheckCondition(achievement, stats)
             if ok then
                 unlocked[achievement.id] = true
+
+                -- v1.3: 发布成就解锁事件
+                if EventBus and EventBus.Publish and EventBus.Events then
+                    EventBus.Publish(EventBus.Events.ACHIEVEMENT_UNLOCK, {
+                        uid = uid,
+                        achievementId = achievement.id,
+                        name = achievement.name,
+                        level = achievement.level or "gold",
+                        category = achievement.category or "growth",
+                        reward = achievement.reward or 100,
+                    })
+                end
+
                 table.insert(newlyUnlocked, {
                     id = achievement.id,
                     name = achievement.name,
                     desc = achievement.desc,
                     reward = achievement.reward,
+                    level = achievement.level or "gold",
+                    category = achievement.category or "growth",
                 })
-                print(string.format("[AchievementSystem] Unlocked: %s (uid=%s)", achievement.name, tostring(uid)))
+                print(string.format("[AchievementSystem] 成就解锁: %s (uid=%s, level=%s)",
+                    achievement.name, tostring(uid), achievement.level or "gold"))
             end
         end
     end
@@ -298,6 +436,37 @@ function AchievementSystem._CheckCondition(achievement, stats)
 
     elseif t == "skill_uses" then
         return stats.skill_uses >= v
+
+    -- v1.3 新增检查类型
+    elseif t == "auction_count" then
+        return stats.auction_count >= v
+
+    elseif t == "max_win_streak" then
+        return stats.max_win_streak >= v
+
+    elseif t == "tournament_wins" then
+        return stats.tournament_wins >= v
+
+    elseif t == "team_battle_count" then
+        return stats.team_battle_count >= v
+
+    elseif t == "guild_contribution" then
+        return stats.guild_contribution >= v
+
+    elseif t == "skin_unlocks" then
+        return stats.skin_unlocks >= v
+
+    elseif t == "total_gold" then
+        return stats.total_gold >= v
+
+    elseif t == "login_days" then
+        return stats.login_days >= v
+
+    elseif t == "total_balance" then
+        return stats.total_balance >= v
+
+    elseif t == "perfect_rounds" then
+        return stats.perfect_rounds >= v
     end
 
     return false
@@ -357,7 +526,9 @@ function AchievementSystem.GetAchievementList(uid)
     local stats = _GetStats(uid)
     local list = {}
 
-    for _, achievement in ipairs(Config.Achievements) do
+    local achievements = Config.Achievements or {}
+
+    for _, achievement in ipairs(achievements) do
         local progress = 0
         local current = 0
 
@@ -379,6 +550,8 @@ function AchievementSystem.GetAchievementList(uid)
             name = achievement.name,
             desc = achievement.desc,
             reward = achievement.reward,
+            level = achievement.level or "gold",
+            category = achievement.category or "growth",
             unlocked = unlocked[achievement.id] == true,
             progress = progress,
             current = current,
@@ -387,6 +560,183 @@ function AchievementSystem.GetAchievementList(uid)
     end
 
     return list
+end
+
+-- ============================================================================
+-- v1.3 新增查询接口
+-- ============================================================================
+
+--- 按等级获取成就列表
+---@param uid number
+---@param levelId string copper/silver/gold/platinum/diamond
+---@return table
+function AchievementSystem.GetAchievementsByLevel(uid, levelId)
+    local list = AchievementSystem.GetAchievementList(uid)
+    local filtered = {}
+    for _, a in ipairs(list) do
+        if a.level == levelId then
+            table.insert(filtered, a)
+        end
+    end
+    return filtered
+end
+
+--- 按类别获取成就列表
+---@param uid number
+---@param categoryId string competition/social/collection/growth/special
+---@return table
+function AchievementSystem.GetAchievementsByCategory(uid, categoryId)
+    local list = AchievementSystem.GetAchievementList(uid)
+    local filtered = {}
+    for _, a in ipairs(list) do
+        if a.category == categoryId then
+            table.insert(filtered, a)
+        end
+    end
+    return filtered
+end
+
+--- 获取玩家的成就统计汇总
+---@param uid number
+---@return table
+function AchievementSystem.GetAchievementSummary(uid)
+    local list = AchievementSystem.GetAchievementList(uid)
+    local unlocked = _GetUnlocked(uid)
+    local stats = _GetStats(uid)
+
+    local summary = {
+        totalCount = #list,
+        unlockedCount = 0,
+        totalReward = 0,
+        byLevel = { copper = 0, silver = 0, gold = 0, platinum = 0, diamond = 0 },
+        byCategory = { competition = 0, social = 0, collection = 0, growth = 0, special = 0 },
+        unlockedByLevel = { copper = 0, silver = 0, gold = 0, platinum = 0, diamond = 0 },
+        unlockedByCategory = { competition = 0, social = 0, collection = 0, growth = 0, special = 0 },
+        recentUnlocks = {},
+        stats = stats,
+    }
+
+    for _, a in ipairs(list) do
+        if summary.byLevel[a.level] then
+            summary.byLevel[a.level] = summary.byLevel[a.level] + 1
+        end
+        if summary.byCategory[a.category] then
+            summary.byCategory[a.category] = summary.byCategory[a.category] + 1
+        end
+
+        if a.unlocked then
+            summary.unlockedCount = summary.unlockedCount + 1
+            summary.totalReward = summary.totalReward + (a.reward or 0)
+            if summary.unlockedByLevel[a.level] then
+                summary.unlockedByLevel[a.level] = summary.unlockedByLevel[a.level] + 1
+            end
+            if summary.unlockedByCategory[a.category] then
+                summary.unlockedByCategory[a.category] = summary.unlockedByCategory[a.category] + 1
+            end
+        end
+    end
+
+    -- 完成度百分比
+    summary.completionRate = summary.totalCount > 0 and (summary.unlockedCount / summary.totalCount) or 0
+
+    return summary
+end
+
+--- 获取成就等级的元数据
+---@return table
+function AchievementSystem.GetAllLevels()
+    return AchievementSystem.Levels
+end
+
+--- 获取成就类别的元数据
+---@return table
+function AchievementSystem.GetAllCategories()
+    return AchievementSystem.Categories
+end
+
+--- 获取玩家的最高连胜/连败记录
+---@param uid number
+---@return table
+function AchievementSystem.GetStreakInfo(uid)
+    local stats = _GetStats(uid)
+    return {
+        maxWinStreak = stats.max_win_streak or 0,
+        currentWinStreak = stats.win_streak or 0,
+        currentLoseStreak = stats.lose_streak or 0,
+    }
+end
+
+--- 获取玩家的主要统计数据（用于UI展示）
+---@param uid number
+---@return table
+function AchievementSystem.GetPlayerStats(uid)
+    local stats = _GetStats(uid)
+    return {
+        winCount = stats.win_count,
+        gameCount = stats.game_count,
+        speedWinCount = stats.speed_win_count,
+        collectedItems = stats.collected_items,
+        legendCount = stats.legend_count,
+        positiveGain = stats.positive_gain,
+        hallVictoryCount = (function()
+            local c = 0
+            for _ in pairs(stats.hall_victory) do c = c + 1 end
+            return c
+        end)(),
+        collectionValue = stats.collection_value,
+        skillUses = stats.skill_uses,
+        -- v1.3
+        auctionCount = stats.auction_count,
+        maxWinStreak = stats.max_win_streak,
+        tournamentWins = stats.tournament_wins,
+        teamBattleCount = stats.team_battle_count,
+        guildContribution = stats.guild_contribution,
+        skinUnlocks = stats.skin_unlocks,
+        totalGold = stats.total_gold,
+        loginDays = stats.login_days,
+        totalBalance = stats.total_balance,
+        perfectRounds = stats.perfect_rounds,
+    }
+end
+
+--- EventBus 事件注册（v1.2/v1.3 系统集成）
+function AchievementSystem.RegisterEvents()
+    -- 监听锦标赛胜利（v1.2 TournamentSystem）
+    EventBus.Subscribe(EventBus.Events.TOURNAMENT_WIN, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordTournamentWin(data.uid, data.tournamentId)
+        end
+    end, "AchievementSystem")
+
+    -- 监听团队战结果（v1.2 TeamBattleSystem）
+    EventBus.Subscribe(EventBus.Events.TEAM_BATTLE_RESULT, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordTeamBattle(data.uid, data.isWin or false)
+        end
+    end, "AchievementSystem")
+
+    -- 监听公会贡献更新（v1.3 GuildSystem）
+    EventBus.Subscribe("guild_contribution_update", function(data)
+        if data and data.uid and data.amount then
+            AchievementSystem.RecordGuildContribution(data.uid, data.amount)
+        end
+    end, "AchievementSystem")
+
+    -- 监听皮肤解锁（v1.2 SkinSystem）
+    EventBus.Subscribe("skin_unlock", function(data)
+        if data and data.uid then
+            AchievementSystem.RecordSkinUnlock(data.uid)
+        end
+    end, "AchievementSystem")
+
+    -- 监听交易完成（v1.2 TradeSystem）
+    EventBus.Subscribe("trade_purchase", function(data)
+        if data and data.uid and data.price then
+            AchievementSystem.RecordGoldObtained(data.uid, -math.abs(data.price))
+        end
+    end, "AchievementSystem")
+
+    print("[AchievementSystem] 事件监听已注册")
 end
 
 --- 重置玩家成就数据（测试用）
