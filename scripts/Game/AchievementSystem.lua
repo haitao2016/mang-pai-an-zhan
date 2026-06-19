@@ -60,23 +60,34 @@ local function _GetStats(uid)
             collected_items = 0,     -- 累计藏品数
             legend_count = 0,        -- 传说级藏品数
             top2_rounds = 0,         -- 单局前2名回合数
-            positive_gain = 0,       -- 正收益局数
-            hall_victory = {},       -- 各厅获胜记录 { "hall_beginner" = true, ... }
-            collection_value = 0,    -- 累计收藏价值
+            positive_gain = 0,        -- 正收益局数
+            hall_victory = {},        -- 各厅获胜记录 { "hall_beginner" = true, ... }
+            collection_value = 0,     -- 累计收藏价值
             skill_uses = 0,          -- 技能使用次数
             -- v1.3 扩展统计字段
-            auction_count = 0,       -- 拍卖次数
-            win_streak = 0,          -- 当前连胜
-            max_win_streak = 0,      -- 历史最高连胜
-            lose_streak = 0,         -- 当前连败
+            auction_count = 0,        -- 拍卖次数
+            win_streak = 0,           -- 当前连胜
+            max_win_streak = 0,       -- 历史最高连胜
+            lose_streak = 0,          -- 当前连败
             tournament_wins = 0,     -- 锦标赛胜场
-            team_battle_count = 0,   -- 团队战次数
-            guild_contribution = 0,  -- 公会贡献值累计
-            skin_unlocks = 0,        -- 皮肤解锁数
-            total_gold = 0,          -- 累计获得金币
-            login_days = 1,          -- 累计登录天数
-            total_balance = 0,       -- 累计最终余额（正收益总和）
-            perfect_rounds = 0,      -- 完美回合（排名第一的次数）
+            team_battle_count = 0,    -- 团队战次数
+            guild_contribution = 0,   -- 公会贡献值累计
+            skin_unlocks = 0,         -- 皮肤解锁数
+            total_gold = 0,           -- 累计获得金币
+            login_days = 1,           -- 累计登录天数
+            total_balance = 0,        -- 累计最终余额（正收益总和）
+            perfect_rounds = 0,       -- 完美回合（排名第一的次数）
+            -- v1.3 装备相关统计
+            equipment_unlock_count = 0, -- 已解锁装备数量
+            equipment_equip_count = 0,  -- 已装备槽位数量
+            max_enhance_level = 0,      -- 最高强化等级
+            set_complete_count = 0,     -- 已完成套装数量
+            max_equipment_rarity = 0,   -- 最高装备稀有度
+            -- v1.3 公会相关统计
+            guild_status = nil,         -- 公会身份（nil/leader/member）
+            guild_level = 0,            -- 公会等级
+            guild_war_wins = 0,        -- 公会战胜场
+            total_contribution = 0,     -- 累计公会贡献值
         }
     end
     return stats_[uid]
@@ -344,6 +355,97 @@ function AchievementSystem.RecordGoldObtained(uid, amount)
 end
 
 -- ============================================================================
+-- v1.3 装备相关记录接口
+-- ============================================================================
+
+--- 记录装备解锁
+---@param uid number
+---@param equipmentId string 装备ID
+---@param rarity number 稀有度
+function AchievementSystem.RecordEquipmentUnlock(uid, equipmentId, rarity)
+    local stats = _GetStats(uid)
+    stats.equipment_unlock_count = stats.equipment_unlock_count + 1
+
+    -- 追踪最高稀有度
+    if rarity and rarity > (stats.max_equipment_rarity or 0) then
+        stats.max_equipment_rarity = rarity
+    end
+
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录装备槽位变化
+---@param uid number
+---@param equippedCount number 当前已装备槽位数
+function AchievementSystem.RecordEquipmentEquip(uid, equippedCount)
+    local stats = _GetStats(uid)
+    stats.equipment_equip_count = equippedCount or 0
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录强化等级变化
+---@param uid number
+---@param newLevel number 新强化等级
+function AchievementSystem.RecordEnhanceLevel(uid, newLevel)
+    local stats = _GetStats(uid)
+    if newLevel > (stats.max_enhance_level or 0) then
+        stats.max_enhance_level = newLevel
+    end
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录套装完成
+---@param uid number
+---@param setId string 套装ID
+function AchievementSystem.RecordSetComplete(uid, setId)
+    local stats = _GetStats(uid)
+    stats.set_complete_count = stats.set_complete_count + 1
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+-- ============================================================================
+-- v1.3 公会相关记录接口
+-- ============================================================================
+
+--- 记录公会身份变化
+---@param uid number
+---@param status string "leader" / "officer" / "member"
+function AchievementSystem.RecordGuildStatus(uid, status)
+    local stats = _GetStats(uid)
+    stats.guild_status = status
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录公会等级变化
+---@param uid number
+---@param level number 公会等级
+function AchievementSystem.RecordGuildLevel(uid, level)
+    local stats = _GetStats(uid)
+    if level > (stats.guild_level or 0) then
+        stats.guild_level = level
+    end
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录公会战胜场
+---@param uid number
+---@param wins number 公会战胜场数
+function AchievementSystem.RecordGuildWarWins(uid, wins)
+    local stats = _GetStats(uid)
+    stats.guild_war_wins = wins or 0
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+--- 记录累计公会贡献
+---@param uid number
+---@param total number 累计贡献值
+function AchievementSystem.RecordTotalContribution(uid, total)
+    local stats = _GetStats(uid)
+    stats.total_contribution = total or 0
+    return AchievementSystem._CheckAllAchievements(uid)
+end
+
+-- ============================================================================
 -- 成就检查
 -- ============================================================================
 
@@ -467,6 +569,35 @@ function AchievementSystem._CheckCondition(achievement, stats)
 
     elseif t == "perfect_rounds" then
         return stats.perfect_rounds >= v
+
+    -- v1.3 装备相关检查类型
+    elseif t == "equipment_unlock" then
+        return stats.equipment_unlock_count >= v
+
+    elseif t == "equipment_equip" then
+        return stats.equipment_equip_count >= v
+
+    elseif t == "enhance_level" then
+        return stats.max_enhance_level >= v
+
+    elseif t == "set_complete" then
+        return stats.set_complete_count >= v
+
+    elseif t == "rarity_equipment" then
+        return stats.max_equipment_rarity >= v
+
+    -- v1.3 公会相关检查类型
+    elseif t == "guild_status" then
+        return stats.guild_status == v
+
+    elseif t == "guild_level" then
+        return stats.guild_level >= v
+
+    elseif t == "guild_war_wins" then
+        return stats.guild_war_wins >= v
+
+    elseif t == "total_contribution" then
+        return stats.total_contribution >= v
     end
 
     return false
@@ -709,30 +840,81 @@ function AchievementSystem.RegisterEvents()
     end, "AchievementSystem")
 
     -- 监听团队战结果（v1.2 TeamBattleSystem）
-    EventBus.Subscribe(EventBus.Events.TEAM_BATTLE_RESULT, function(data)
+    EventBus.Subscribe(EventBus.Events.TEAM_WIN, function(data)
         if data and data.uid then
-            AchievementSystem.RecordTeamBattle(data.uid, data.isWin or false)
+            AchievementSystem.RecordTeamBattle(data.uid, true)
         end
     end, "AchievementSystem")
 
     -- 监听公会贡献更新（v1.3 GuildSystem）
-    EventBus.Subscribe("guild_contribution_update", function(data)
-        if data and data.uid and data.amount then
-            AchievementSystem.RecordGuildContribution(data.uid, data.amount)
+    EventBus.Subscribe(EventBus.Events.GUILD_CONTRIBUTION, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordGuildContribution(data.uid, data.amount or 0)
+            -- 更新累计贡献
+            local stats = _GetStats(data.uid)
+            AchievementSystem.RecordTotalContribution(data.uid, stats.total_contribution + (data.amount or 0))
+        end
+    end, "AchievementSystem")
+
+    -- 监听公会升级（v1.3 GuildSystem）
+    EventBus.Subscribe(EventBus.Events.GUILD_LEVEL_UP, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordGuildLevel(data.uid, data.newLevel or 1)
+        end
+    end, "AchievementSystem")
+
+    -- 监听公会创建/加入（v1.3 GuildSystem）
+    EventBus.Subscribe(EventBus.Events.GUILD_CREATE, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordGuildStatus(data.uid, "leader")
+        end
+    end, "AchievementSystem")
+
+    EventBus.Subscribe(EventBus.Events.GUILD_JOIN, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordGuildStatus(data.uid, "member")
+        end
+    end, "AchievementSystem")
+
+    -- 监听公会战结束（v1.3 GuildSystem）
+    EventBus.Subscribe(EventBus.Events.GUILD_WAR_END, function(data)
+        if data and data.winnerGuildId then
+            -- 实际应用中需要根据公会成员列表更新每个成员的战胜场
+        end
+    end, "AchievementSystem")
+
+    -- 监听装备解锁（v1.3 EquipmentSystem）
+    EventBus.Subscribe(EventBus.Events.EQUIPMENT_UNLOCK, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordEquipmentUnlock(data.uid, data.equipmentId, data.rarity)
+        end
+    end, "AchievementSystem")
+
+    -- 监听装备强化（v1.3 EquipmentSystem）
+    EventBus.Subscribe(EventBus.Events.EQUIPMENT_ENHANCE, function(data)
+        if data and data.uid and data.newLevel then
+            AchievementSystem.RecordEnhanceLevel(data.uid, data.newLevel)
+        end
+    end, "AchievementSystem")
+
+    -- 监听套装完成（v1.3 EquipmentSystem）
+    EventBus.Subscribe(EventBus.Events.EQUIPMENT_SET_COMPLETE, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordSetComplete(data.uid, data.setId)
         end
     end, "AchievementSystem")
 
     -- 监听皮肤解锁（v1.2 SkinSystem）
-    EventBus.Subscribe("skin_unlock", function(data)
+    EventBus.Subscribe(EventBus.Events.SKIN_UNLOCK, function(data)
         if data and data.uid then
             AchievementSystem.RecordSkinUnlock(data.uid)
         end
     end, "AchievementSystem")
 
     -- 监听交易完成（v1.2 TradeSystem）
-    EventBus.Subscribe("trade_purchase", function(data)
-        if data and data.uid and data.price then
-            AchievementSystem.RecordGoldObtained(data.uid, -math.abs(data.price))
+    EventBus.Subscribe(EventBus.Events.TRADE_PURCHASE, function(data)
+        if data and data.uid then
+            AchievementSystem.RecordGoldObtained(data.uid, -(data.price or 0))
         end
     end, "AchievementSystem")
 

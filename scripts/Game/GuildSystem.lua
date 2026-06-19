@@ -356,7 +356,7 @@ function GuildSystem.AddContribution(guildId, uid, amount, reason)
     end
 
     -- 发布事件
-    EventBus.Publish(EventBus.Events.GUILD_CONTRIBUTION_UPDATE, {
+    EventBus.Publish(EventBus.Events.GUILD_CONTRIBUTION, {
         guildId = guildId,
         uid = uid,
         amount = amount,
@@ -432,7 +432,7 @@ function GuildSystem.StartGuildWar(guild1Id, guild2Id)
 
     _guildWarMatches[matchId] = match
 
-    EventBus.Publish("guild_war_started", {
+    EventBus.Publish(EventBus.Events.GUILD_WAR_START, {
         matchId = matchId,
         guild1Id = guild1Id,
         guild2Id = guild2Id,
@@ -482,7 +482,7 @@ function GuildSystem.SubmitGuildWarResult(matchId, winnerGuildId)
     end
 
     -- 发布事件
-    EventBus.Publish("guild_war_ended", {
+    EventBus.Publish(EventBus.Events.GUILD_WAR_END, {
         matchId = matchId,
         winnerGuildId = winnerGuildId,
         loserGuildId = loserGuildId,
@@ -757,7 +757,7 @@ end
 -- ============================================================================
 function GuildSystem.RegisterEvents()
     -- 监听任务完成事件（v1.1 系统集成）
-    EventBus.Subscribe("mission_completed", function(data)
+    EventBus.Subscribe(EventBus.Events.MISSION_COMPLETE, function(data)
         if data and data.uid then
             local guild, gid = _GetPlayerGuild(data.uid)
             if guild then
@@ -767,7 +767,7 @@ function GuildSystem.RegisterEvents()
     end, "GuildSystem")
 
     -- 监听赛季进度事件（v1.1 系统集成）
-    EventBus.Subscribe("season_progress_update", function(data)
+    EventBus.Subscribe(EventBus.Events.SEASON_PROGRESS, function(data)
         if data and data.uid then
             local guild, gid = _GetPlayerGuild(data.uid)
             if guild and data.xp and data.xp > 10 then

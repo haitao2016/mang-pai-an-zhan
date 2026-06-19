@@ -84,8 +84,28 @@ EventBus.Events = {
 
     -- --- 皮肤系统（v1.2）---
     SKIN_UNLOCK        = "skin_unlock",         -- 皮肤解锁
-    SKIN_EQUIP         = "skin_equip",          -- 装备皮肤
-    SKIN_SET_COMPLETE  = "skin_set_complete",   -- 皮肤套装完成
+    SKIN_EQUIP         = "skin_equip",         -- 装备皮肤
+    SKIN_SET_COMPLETE  = "skin_set_complete",  -- 皮肤套装完成
+
+    -- --- 公会系统（v1.3）---
+    GUILD_CREATE             = "guild_create",            -- 创建公会
+    GUILD_DISBAND           = "guild_disband",          -- 公会解散
+    GUILD_JOIN              = "guild_join",             -- 加入公会
+    GUILD_LEAVE             = "guild_leave",            -- 离开公会
+    GUILD_KICK              = "guild_kick",             -- 踢出成员
+    GUILD_INVITE            = "guild_invite",           -- 邀请加入
+    GUILD_CONTRIBUTION      = "guild_contribution",     -- 贡献值变化
+    GUILD_LEVEL_UP          = "guild_level_up",         -- 公会升级
+    GUILD_WAR_START         = "guild_war_start",        -- 公会战开始
+    GUILD_WAR_END           = "guild_war_end",          -- 公会战结束
+    GUILD_SHOP_PURCHASE     = "guild_shop_purchase",    -- 公会商店购买
+
+    -- --- 装备系统（v1.3）---
+    EQUIPMENT_UNLOCK        = "equipment_unlock",       -- 装备解锁
+    EQUIPMENT_EQUIP         = "equipment_equip",        -- 装备物品
+    EQUIPMENT_UNEQUIP       = "equipment_unequip",     -- 卸下装备
+    EQUIPMENT_ENHANCE       = "equipment_enhance",      -- 装备强化
+    EQUIPMENT_SET_COMPLETE  = "equipment_set_complete", -- 装备套装完成
 
     -- --- 系统相关 ---
     SYSTEM_INIT     = "system_init",     -- 系统初始化完成

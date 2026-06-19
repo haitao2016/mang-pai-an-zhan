@@ -50,6 +50,10 @@ SystemManager.SystemRegistry = {
     { name = "TeamBattleSystem", module = "Game.TeamBattleSystem",    priority = 20 },
     { name = "TradeSystem",      module = "Game.TradeSystem",         priority = 20 },
     { name = "SkinSystem",       module = "Game.SkinSystem",          priority = 20 },
+
+    -- ── v1.3 新系统 ──
+    { name = "GuildSystem",      module = "Game.GuildSystem",         priority = 30 },
+    { name = "EquipmentSystem",  module = "Game.EquipmentSystem",     priority = 30 },
 }
 
 -- ============================================================================
@@ -59,6 +63,7 @@ function SystemManager.GetSystemStats()
     local v1_0 = 0
     local v1_1 = 0
     local v1_2 = 0
+    local v1_3 = 0
 
     for _, sys in ipairs(SystemManager.SystemRegistry) do
         if sys.priority == 1 then
@@ -67,6 +72,8 @@ function SystemManager.GetSystemStats()
             v1_1 = v1_1 + 1
         elseif sys.priority == 20 then
             v1_2 = v1_2 + 1
+        elseif sys.priority == 30 then
+            v1_3 = v1_3 + 1
         end
     end
 
@@ -74,7 +81,8 @@ function SystemManager.GetSystemStats()
         total = #SystemManager.SystemRegistry,
         v1_0 = v1_0,
         v1_1 = v1_1,
-        v1_2 = v1_2
+        v1_2 = v1_2,
+        v1_3 = v1_3
     }
 end
 
@@ -96,6 +104,7 @@ function SystemManager.Init()
     print("                 v1.0 核心: " .. stats.v1_0)
     print("                 v1.1 游戏: " .. stats.v1_1)
     print("                 v1.2 新系统: " .. stats.v1_2)
+    print("                 v1.3 社交: " .. stats.v1_3)
 
     -- 按优先级排序
     local sorted = {}

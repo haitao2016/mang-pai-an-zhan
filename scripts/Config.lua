@@ -698,4 +698,399 @@ Config.SkinSets = {
     }
 }
 
+-- ============================================================================
+-- v1.3.0 新增：公会配置
+-- ============================================================================
+Config.Guild = {
+    createCost = 5000,                    -- 创建公会费用（金币）
+    baseMaxMembers = 10,                 -- 基础成员数
+    membersPerLevel = 5,                 -- 每级增加成员数
+    maxLevel = 10,                       -- 最高等级
+    expPerLevel = 500,                   -- 每级所需经验（递增）
+    warVictoryExp = 100,                 -- 公会战胜利公会经验奖励
+    warVictoryMemberContribution = 20,    -- 成员个人贡献值奖励
+    warVictoryReward = 500,               -- 公会战胜利金币奖励
+    dailySignInContribution = 5,          -- 每日签到贡献值
+    minNameLength = 2,                   -- 公会名称最小长度
+    maxNameLength = 12,                  -- 公会名称最大长度
+    maxDescriptionLength = 50,           -- 公会描述最大长度
+    inviteExpirySeconds = 86400,         -- 邀请过期时间（24小时）
+}
+
+-- 公会商店物品配置
+Config.GuildShop = {
+    {
+        id = "guild_gold_pack_small",
+        name = "小型金币包",
+        description = "包含 1000 金币",
+        rarity = 2,
+        cost = 50,
+        rewardType = "gold",
+        rewardAmount = 1000
+    },
+    {
+        id = "guild_gold_pack_medium",
+        name = "中型金币包",
+        description = "包含 2500 金币",
+        rarity = 3,
+        cost = 100,
+        rewardType = "gold",
+        rewardAmount = 2500
+    },
+    {
+        id = "guild_item_pack",
+        name = "公会藏品包",
+        description = "随机获得一件藏品",
+        rarity = 3,
+        cost = 150,
+        rewardType = "item",
+        rewardItemRarity = 2
+    },
+    {
+        id = "guild_skill_boost",
+        name = "技能强化符",
+        description = "下次技能使用效果提升 50%",
+        rarity = 3,
+        cost = 200,
+        rewardType = "skillBoost",
+        boostDuration = 1
+    },
+    {
+        id = "guild_avatar_frame",
+        name = "公会专属头像框",
+        description = "永久公会头像框装饰",
+        rarity = 4,
+        cost = 300,
+        rewardType = "avatarFrame",
+        rewardId = "guild_frame"
+    },
+    {
+        id = "guild_title_elite",
+        name = "公会精英称号",
+        description = "永久公会精英称号",
+        rarity = 4,
+        cost = 500,
+        rewardType = "title",
+        rewardId = "guild_elite"
+    },
+    {
+        id = "guild_gold_pack_large",
+        name = "大型金币包",
+        description = "包含 5000 金币",
+        rarity = 4,
+        cost = 350,
+        rewardType = "gold",
+        rewardAmount = 5000
+    },
+    {
+        id = "guild_legendary_item",
+        name = "公会传说藏品",
+        description = "必得一件传说级藏品",
+        rarity = 5,
+        cost = 1000,
+        rewardType = "item",
+        rewardItemRarity = 4
+    },
+}
+
+-- ============================================================================
+-- v1.3.0 新增：装备系统配置
+-- ============================================================================
+Config.Equipment = {
+    maxEnhanceLevel = 10,                -- 最高强化等级
+    baseEnhanceCost = 500,               -- 基础强化费用
+    costMultiplierPerLevel = 1.5,        -- 每级费用倍率
+    successRateBase = 0.90,               -- 基础成功率
+    successRateDrop = 0.05,              -- 每级成功率下降
+    statsPerEnhanceLevel = 0.1,          -- 每级强化属性加成百分比
+
+    -- 装备槽位定义
+    slots = {
+        { id = "weapon",     name = "武器", maxCount = 1 },
+        { id = "armor",      name = "防具", maxCount = 1 },
+        { id = "accessory",  name = "饰品", maxCount = 1 },
+        { id = "badge",      name = "徽章", maxCount = 1 },
+    },
+}
+
+-- 装备物品配置
+Config.EquipmentItems = {
+    -- ═══════════════════════════════════════════════════════
+    -- 武器类 (Weapon)
+    -- ═══════════════════════════════════════════════════════
+    {
+        id = "weapon_basic_hammer",
+        name = "新手拍卖锤",
+        slot = "weapon",
+        rarity = 1,
+        stats = { bidAccuracy = 0.05 },
+        enhanceCostBase = 300,
+        description = "最基础的拍卖工具，适合新手使用"
+    },
+    {
+        id = "weapon_iron_gavel",
+        name = "铁质法槌",
+        slot = "weapon",
+        rarity = 1,
+        stats = { bidAccuracy = 0.08, finalBonus = 0.02 },
+        enhanceCostBase = 350,
+        description = "比新手锤略好，增加出价精准度和收益"
+    },
+    {
+        id = "weapon_silver_hammer",
+        name = "银质拍卖锤",
+        slot = "weapon",
+        rarity = 2,
+        stats = { bidAccuracy = 0.12, finalBonus = 0.05 },
+        enhanceCostBase = 500,
+        description = "银制精致法槌，提升出价技巧"
+    },
+    {
+        id = "weapon_gold_sword",
+        name = "金币剑",
+        slot = "weapon",
+        rarity = 2,
+        stats = { bidAccuracy = 0.10, finalBonus = 0.08 },
+        enhanceCostBase = 600,
+        description = "象征财富的武器，增加最终收益"
+    },
+    {
+        id = "weapon_mystic_gavel",
+        name = "神秘法槌",
+        slot = "weapon",
+        rarity = 3,
+        stats = { bidAccuracy = 0.18, finalBonus = 0.12, critChance = 0.05 },
+        enhanceCostBase = 800,
+        description = "蕴含神秘力量的法槌，大幅提升能力"
+    },
+    {
+        id = "weapon_auction_master",
+        name = "拍卖大师锤",
+        slot = "weapon",
+        rarity = 4,
+        stats = { bidAccuracy = 0.25, finalBonus = 0.18, critChance = 0.10 },
+        enhanceCostBase = 1200,
+        description = "大师级拍卖师的象征，非常强大"
+    },
+    {
+        id = "weapon_mythic_scepter",
+        name = "神话权杖",
+        slot = "weapon",
+        rarity = 5,
+        stats = { bidAccuracy = 0.35, finalBonus = 0.25, critChance = 0.15, allRarityBonus = 0.05 },
+        enhanceCostBase = 2000,
+        description = "传说中只有神话级拍卖师才能使用的权杖"
+    },
+
+    -- ═══════════════════════════════════════════════════════
+    -- 防具类 (Armor)
+    -- ═══════════════════════════════════════════════════════
+    {
+        id = "armor_basic_cloak",
+        name = "普通斗篷",
+        slot = "armor",
+        rarity = 1,
+        stats = { defense = 0.10 },
+        enhanceCostBase = 300,
+        description = "基础的防护装备"
+    },
+    {
+        id = "armor_leather_vest",
+        name = "皮甲背心",
+        slot = "armor",
+        rarity = 1,
+        stats = { defense = 0.15, antiSkill = 0.03 },
+        enhanceCostBase = 350,
+        description = "提供更好的防护"
+    },
+    {
+        id = "armor_silver_robe",
+        name = "银丝长袍",
+        slot = "armor",
+        rarity = 2,
+        stats = { defense = 0.20, antiSkill = 0.08 },
+        enhanceCostBase = 500,
+        description = "银丝编织的防护长袍"
+    },
+    {
+        id = "armor_mystic_robe",
+        name = "神秘长袍",
+        slot = "armor",
+        rarity = 3,
+        stats = { defense = 0.28, antiSkill = 0.15, finalBonus = 0.05 },
+        enhanceCostBase = 800,
+        description = "带有神秘符文的防护装备"
+    },
+    {
+        id = "armor_millionaire",
+        name = "富豪礼服",
+        slot = "armor",
+        rarity = 4,
+        stats = { defense = 0.35, antiSkill = 0.20, finalBonus = 0.12 },
+        enhanceCostBase = 1200,
+        description = "富豪阶层的象征礼服，防护与收益兼备"
+    },
+    {
+        id = "armor_legendary_armor",
+        name = "传说守护甲",
+        slot = "armor",
+        rarity = 5,
+        stats = { defense = 0.45, antiSkill = 0.30, finalBonus = 0.20 },
+        enhanceCostBase = 2000,
+        description = "最顶级的防具，几乎免疫所有负面效果"
+    },
+
+    -- ═══════════════════════════════════════════════════════
+    -- 饰品类 (Accessory)
+    -- ═══════════════════════════════════════════════════════
+    {
+        id = "acc_lucky_coin",
+        name = "幸运硬币",
+        slot = "accessory",
+        rarity = 2,
+        stats = { critChance = 0.12 },
+        enhanceCostBase = 500,
+        description = "据说能带来好运的古老硬币"
+    },
+    {
+        id = "acc_collector_badge",
+        name = "收藏家徽章",
+        slot = "accessory",
+        rarity = 3,
+        stats = { rarityBonus = 0.12, itemValueBonus = 0.10 },
+        enhanceCostBase = 700,
+        description = "资深收藏家的证明，增加藏品价值"
+    },
+    {
+        id = "acc_rarity_ring",
+        name = "稀有度指环",
+        slot = "accessory",
+        rarity = 4,
+        stats = { rarityBonus = 0.22, itemValueBonus = 0.18, critChance = 0.08 },
+        enhanceCostBase = 1000,
+        description = "大幅提升获得稀有藏品的概率"
+    },
+    {
+        id = "acc_mythic_amulet",
+        name = "神话护身符",
+        slot = "accessory",
+        rarity = 5,
+        stats = { rarityBonus = 0.35, itemValueBonus = 0.30, critChance = 0.20 },
+        enhanceCostBase = 1800,
+        description = "拥有神话力量的护身符，极大提升收益"
+    },
+
+    -- ═══════════════════════════════════════════════════════
+    -- 徽章类 (Badge)
+    -- ═══════════════════════════════════════════════════════
+    {
+        id = "badge_bronze_star",
+        name = "铜星徽章",
+        slot = "badge",
+        rarity = 1,
+        stats = { globalBonus = 0.03 },
+        enhanceCostBase = 400,
+        description = "最基础的荣誉徽章"
+    },
+    {
+        id = "badge_silver_star",
+        name = "银星徽章",
+        slot = "badge",
+        rarity = 2,
+        stats = { globalBonus = 0.06 },
+        enhanceCostBase = 600,
+        description = "银质荣誉徽章"
+    },
+    {
+        id = "badge_gold_star",
+        name = "金星徽章",
+        slot = "badge",
+        rarity = 3,
+        stats = { globalBonus = 0.10 },
+        enhanceCostBase = 900,
+        description = "金色荣誉徽章"
+    },
+    {
+        id = "badge_auction_master",
+        name = "拍卖大师徽章",
+        slot = "badge",
+        rarity = 4,
+        stats = { globalBonus = 0.15, bidAccuracy = 0.10 },
+        enhanceCostBase = 1400,
+        description = "证明拍卖大师身份的徽章"
+    },
+    {
+        id = "badge_champion",
+        name = "冠军徽章",
+        slot = "badge",
+        rarity = 5,
+        stats = { globalBonus = 0.25, critChance = 0.20, bidAccuracy = 0.15 },
+        enhanceCostBase = 2500,
+        description = "只有真正的冠军才配拥有的无上徽章"
+    },
+}
+
+-- 装备套装配置
+Config.EquipmentSets = {
+    {
+        id = "auction_master_set",
+        name = "拍卖大师套装",
+        description = "集齐拍卖大师系列装备，化身顶级拍卖师",
+        pieces = { "weapon_auction_master", "armor_millionaire", "acc_rarity_ring", "badge_auction_master" },
+        bonus2 = { globalBonus = 0.05, finalBonus = 0.08 },
+        bonus3 = { globalBonus = 0.10, finalBonus = 0.12, bidAccuracy = 0.05 },
+        bonus4 = { globalBonus = 0.20, finalBonus = 0.20, bidAccuracy = 0.10, critChance = 0.15 },
+    },
+    {
+        id = "mystic_set",
+        name = "神秘套装",
+        description = "集齐神秘系列装备，掌控拍卖场",
+        pieces = { "weapon_mystic_gavel", "armor_mystic_robe" },
+        bonus2 = { globalBonus = 0.15, antiSkill = 0.20, rarityBonus = 0.10 },
+    },
+    {
+        id = "mythic_legend_set",
+        name = "神话传说套装",
+        description = "集齐所有神话级装备，成为传奇",
+        pieces = { "weapon_mythic_scepter", "armor_legendary_armor", "acc_mythic_amulet", "badge_champion" },
+        bonus2 = { globalBonus = 0.10 },
+        bonus3 = { globalBonus = 0.20, allRarityBonus = 0.10 },
+        bonus4 = { globalBonus = 0.50, allRarityBonus = 0.25, critChance = 0.35, finalBonus = 0.30 },
+    },
+    {
+        id = "balanced_set",
+        name = "均衡套装",
+        description = "攻防兼备的均衡配置，适合各种场合",
+        pieces = { "weapon_gold_sword", "armor_leather_vest", "acc_lucky_coin", "badge_silver_star" },
+        bonus2 = { globalBonus = 0.08, defense = 0.10 },
+        bonus3 = { globalBonus = 0.15, defense = 0.15, critChance = 0.08 },
+        bonus4 = { globalBonus = 0.25, defense = 0.25, critChance = 0.15, bidAccuracy = 0.10 },
+    },
+}
+
+-- ============================================================================
+-- v1.3.0 新增：装备成就配置（用于 AchievementSystem）
+-- ============================================================================
+Config.EquipmentAchievements = {
+    { id = "first_equipment",    name = "第一份装备",      desc = "解锁第一件装备",           checkType = "equipment_unlock", checkValue = 1,  level = "gold",     category = "special",     reward = 500 },
+    { id = "equipment_5",        name = "装备初学者",      desc = "解锁 5 件装备",            checkType = "equipment_unlock", checkValue = 5,  level = "silver",   category = "collection", reward = 1000 },
+    { id = "equipment_10",       name = "装备收藏家",      desc = "解锁 10 件装备",           checkType = "equipment_unlock", checkValue = 10, level = "gold",     category = "collection", reward = 2000 },
+    { id = "equipment_full",     name = "全副武装",        desc = "同时装备 4 个槽位",        checkType = "equipment_equip",  checkValue = 4,  level = "gold",     category = "competition", reward = 1500 },
+    { id = "enhance_5",         name = "强化新手",         desc = "将装备强化到 5 级",        checkType = "enhance_level",    checkValue = 5,  level = "silver",   category = "growth",     reward = 1200 },
+    { id = "enhance_max",       name = "强化达人",         desc = "将装备强化到满级",         checkType = "enhance_level",    checkValue = 10, level = "platinum", category = "special",     reward = 5000 },
+    { id = "set_complete_1",    name = "套装大师",         desc = "完成一个装备套装",          checkType = "set_complete",     checkValue = 1,  level = "platinum", category = "collection", reward = 3000 },
+    { id = "set_complete_3",    name = "套装收藏家",       desc = "完成 3 个装备套装",         checkType = "set_complete",     checkValue = 3,  level = "diamond",  category = "collection", reward = 8000 },
+    { id = "mythic_equipment",  name = "神话装备",         desc = "获得一件神话级装备",        checkType = "rarity_equipment", checkValue = 5,  level = "platinum", category = "collection", reward = 4000 },
+}
+
+-- 公会成就配置
+Config.GuildAchievements = {
+    { id = "guild_create",       name = "公会创始人",      desc = "创建一个公会",            checkType = "guild_status",    checkValue = "leader", level = "silver",   category = "social",     reward = 2000 },
+    { id = "guild_join",        name = "公会成员",         desc = "加入任意公会",            checkType = "guild_status",    checkValue = "member", level = "copper",   category = "social",     reward = 500 },
+    { id = "guild_level_5",     name = "五级公会",         desc = "公会达到 5 级",           checkType = "guild_level",     checkValue = 5,       level = "gold",     category = "social",     reward = 3000 },
+    { id = "guild_level_max",   name = "顶级公会",         desc = "公会达到最高等级",        checkType = "guild_level",     checkValue = 10,      level = "diamond",  category = "special",     reward = 10000 },
+    { id = "guild_war_victory", name = "公会战士",         desc = "赢得 10 场公会战",       checkType = "guild_war_wins",  checkValue = 10,      level = "gold",     category = "competition", reward = 3000 },
+    { id = "guild_contribution",name = "忠诚成员",         desc = "累计贡献 1000 点",        checkType = "total_contribution", checkValue = 1000, level = "silver",   category = "growth",     reward = 1500 },
+}
+
 return Config
