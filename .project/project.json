@@ -6,20 +6,26 @@
   },
   "entry": "client_main.lua",
   "version": "1.0.0",
+  "game": {
+    "title": "盲拍暗战",
+    "description": "暗拍博弈网络游戏，玩家在看不到对手出价的情况下进行竞拍，通过策略和心理战获取稀有藏品",
+    "category": "strategy",
+    "tags": ["拍卖", "暗拍", "心理战", "收藏"]
+  },
   "taptap_publish": {
-    "title": "<game title, required>",
-    "description": "<game description>",
-    "category": "<game category: rpg, casual, action, strategy, simulation, trivia, arcade, adventure, card, sports, racing, puzzle, educational, music, word, board>",
+    "title": "盲拍暗战",
+    "description": "《盲拍暗战》是一款暗拍博弈网络游戏。玩家在看不到对手出价的情况下进行竞拍，通过策略推理和心理博弈获取稀有藏品。支持单人与AI对战，以及多人在线对战。",
+    "category": "strategy",
     "screen_orientation": "landscape",
     "collection_type": "sce",
-    "trial_note": "<developer's note>",
+    "trial_note": "支持单人与AI对战，快来体验暗拍博弈的乐趣！",
     "app_platforms": "1,2",
     "developer_id": 385689
   },
   "assets": {
-    "icon": "",
+    "icon": "assets/images/icon.png",
     "screenshots": [],
-    "promotional_image": ""
+    "promotional_image": "assets/images/promo.png"
   },
   "entry@client": "client_main.lua",
   "entry@server": "server_main.lua"
