@@ -276,4 +276,127 @@ function UIUtils.CompareVersions(v1, v2)
     return 0
 end
 
+-- ============================================================================
+-- v1.1.0 新增：UI 增强辅助函数
+-- ============================================================================
+
+--- 获取排行榜排名颜色
+---@param rank number 排名
+---@return table color RGBA 数组
+function UIUtils.GetRankColor(rank)
+    if rank == 1 then
+        return { r = 255, g = 215, b = 0 }     -- 金色
+    elseif rank == 2 then
+        return { r = 192, g = 192, b = 192 }   -- 银色
+    elseif rank == 3 then
+        return { r = 205, g = 127, b = 50 }     -- 铜色
+    else
+        return { r = 180, g = 180, b = 180 }   -- 灰色
+    end
+end
+
+--- 获取赛季等级颜色
+---@param level number 等级
+---@return table color RGBA 数组
+function UIUtils.GetSeasonLevelColor(level)
+    if level >= 40 then
+        return { r = 255, g = 180, b = 30 }    -- 传说金色
+    elseif level >= 30 then
+        return { r = 180, g = 80, b = 255 }     -- 史诗紫色
+    elseif level >= 20 then
+        return { r = 80, g = 160, b = 255 }      -- 稀有蓝色
+    elseif level >= 10 then
+        return { r = 80, g = 200, b = 120 }      -- 绿色
+    else
+        return { r = 180, g = 180, b = 180 }    -- 普通灰色
+    end
+end
+
+--- 格式化赛季经验条百分比
+---@param current number 当前经验
+---@param needed number 升级所需经验
+---@return string 百分比文本
+function UIUtils.FormatSeasonProgress(current, needed)
+    if not needed or needed == 0 then return "MAX" end
+    local percent = math.floor(current / needed * 100)
+    return percent .. "%"
+end
+
+--- 获取进度条颜色（基于百分比）
+---@param percent number 0-100
+---@return table color RGBA 数组
+function UIUtils.GetProgressBarColor(percent)
+    if percent >= 80 then
+        return { r = 80, g = 200, b = 80 }     -- 绿色
+    elseif percent >= 50 then
+        return { r = 200, g = 200, b = 80 }     -- 黄色
+    else
+        return { r = 200, g = 80, b = 80 }      -- 红色
+    end
+end
+
+--- 获取好友在线状态颜色
+---@param isOnline boolean 是否在线
+---@return table color RGBA 数组
+function UIUtils.GetOnlineStatusColor(isOnline)
+    if isOnline then
+        return { r = 80, g = 200, b = 80 }      -- 绿色
+    else
+        return { r = 150, g = 150, b = 150 }      -- 灰色
+    end
+end
+
+--- 格式化剩余时间文本
+---@param seconds number 秒数
+---@return string 格式化文本
+function UIUtils.FormatRemainingTime(seconds)
+    if seconds <= 0 then return "已结束" end
+    local days = math.floor(seconds / 86400)
+    local hours = math.floor((seconds % 86400) / 3600)
+    local mins = math.floor((seconds % 3600) / 60)
+
+    if days > 0 then
+        return string.format("%d天 %d小时", days, hours)
+    elseif hours > 0 then
+        return string.format("%d小时 %d分钟", hours, mins)
+    else
+        return string.format("%d分钟", mins)
+    end
+end
+
+--- 获取合作被动激活状态图标
+---@param isActive boolean 是否激活
+---@return string emoji 图标
+function UIUtils.GetSynergyIcon(isActive)
+    if isActive then
+        return "⚡"
+    else
+        return "⚪"
+    end
+end
+
+--- 格式化技能冷却文本
+---@param cd number 冷却回合数
+---@return string 文本
+function UIUtils.FormatCooldown(cd)
+    if cd <= 0 then
+        return "就绪"
+    else
+        return cd .. " 回合"
+    end
+end
+
+--- 获取任务进度颜色
+---@param progress number 当前进度
+---@param target number 目标进度
+---@return table color RGBA 数组
+function UIUtils.GetMissionProgressColor(progress, target)
+    if progress >= target then
+        return { r = 80, g = 200, b = 80 }      -- 完成：绿色
+    else
+        local percent = (progress / target) * 100
+        return UIUtils.GetProgressBarColor(percent)
+    end
+end
+
 return UIUtils

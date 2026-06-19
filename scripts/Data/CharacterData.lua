@@ -269,6 +269,132 @@ CharacterData.Characters = {
     },
 }
 
+-- ============================================================================
+-- v1.1.0 新增：角色 9-12（第二波角色）
+-- ============================================================================
+
+    -- ================================================================
+    -- 9. 神秘收藏家「洞察」- 信息预测型
+    -- ================================================================
+    {
+        id = "mystery_collector",
+        name = "神秘收藏家",
+        title = "洞察先知",
+        desc = "无人知其来历，却总能在关键时刻预见对手的出价。",
+        avatar = "mystery_collector",
+
+        activeSkill = {
+            id = "price_predict",
+            name = "价格预知",
+            desc = "预知下一轮对手的平均出价金额（±20% 误差）。",
+            category = "情报揭示",
+            cooldown = 2,
+            maxUses = 3,
+            serverLogic = "SKILL_PRICE_PREDICT",
+        },
+
+        passiveSkill = {
+            id = "timeout_bonus",
+            name = "从容不迫",
+            desc = "每局首次出价超时（10 秒内未提交）时，自动获得 +5% 的额外余额。",
+            category = "经济增益",
+            trigger = "round_start",
+            serverLogic = "PASSIVE_TIMEOUT_BONUS",
+        },
+    },
+
+    -- ================================================================
+    -- 10. 风险投资人「豪赌」- 高风险高回报型
+    -- ================================================================
+    {
+        id = "venture_investor",
+        name = "风险投资人",
+        title = "豪赌大师",
+        desc = "商场如战场，高风险才有高回报，他深谙此道。",
+        avatar = "venture_investor",
+
+        activeSkill = {
+            id = "high_stakes",
+            name = "孤注一掷",
+            desc = "本轮出价效果 ×1.5，但无论胜负，结算时扣除 500 余额。",
+            category = "经济增益",
+            cooldown = 3,
+            maxUses = 2,
+            serverLogic = "SKILL_HIGH_STAKES",
+        },
+
+        passiveSkill = {
+            id = "profit_share",
+            name = "利润分成",
+            desc = "如果本轮出价排名第 1，结算时额外获得 +300 余额。",
+            category = "经济增益",
+            trigger = "round_end",
+            serverLogic = "PASSIVE_PROFIT_SHARE",
+        },
+    },
+
+    -- ================================================================
+    -- 11. 心理学家「读心」- 心理反制型
+    -- ================================================================
+    {
+        id = "psychologist",
+        name = "心理学家",
+        title = "读心大师",
+        desc = "一眼便能看穿对手的心思，并巧妙地加以利用。",
+        avatar = "psychologist",
+
+        activeSkill = {
+            id = "mind_read",
+            name = "读心术",
+            desc = "窥探一名对手当前的剩余余额（±1000 误差）。",
+            category = "情报揭示",
+            cooldown = 2,
+            maxUses = 3,
+            serverLogic = "SKILL_MIND_READ",
+        },
+
+        passiveSkill = {
+            id = "counter_strike",
+            name = "反制之盾",
+            desc = "被对手技能命中时，有 30% 概率反制成功，使技能效果失效。",
+            category = "干扰信号",
+            trigger = "bid_phase",
+            serverLogic = "PASSIVE_COUNTER_STRIKE",
+        },
+    },
+
+    -- ================================================================
+    -- 12. 时间管理大师「时停」- 时间控制型
+    -- ================================================================
+    {
+        id = "time_master",
+        name = "时间管理大师",
+        title = "时停先驱",
+        desc = "时间是他最忠实的盟友，每一秒都能被精准掌控。",
+        avatar = "time_master",
+
+        activeSkill = {
+            id = "time_stop",
+            name = "时间膨胀",
+            desc = "本轮自己的出价时限延长 10 秒（不受其他效果影响）。",
+            category = "经济增益",
+            cooldown = 2,
+            maxUses = 3,
+            serverLogic = "SKILL_TIME_STOP",
+        },
+
+        passiveSkill = {
+            id = "time_rewind",
+            name = "时间回溯",
+            desc = "每局自动获得 1 次机会：当出价提交后发现决策失误时，可撤回并重新出价（限本轮内）。",
+            category = "经济增益",
+            trigger = "round_start",
+            serverLogic = "PASSIVE_TIME_REWIND",
+        },
+    },
+
+}
+
 --- 技能 serverLogic → 角色 id 的反查表（运行时构建）
 CharacterData._skillToCharacter = nil
 
