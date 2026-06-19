@@ -6,8 +6,8 @@ local Config = {}
 
 -- 游戏基本信息
 Config.Title = "盲拍暗战"
-Config.Version = "1.2.0"
-Config.ReleaseDate = "2026-08-19"
+Config.Version = "1.3.0"
+Config.ReleaseDate = "2026-06-19"
 Config.ScreenOrientation = "landscape"  -- 横屏（移动端更适合竞拍操作）
 
 -- ============================================================================
@@ -514,8 +514,8 @@ Config.ItemSets = {
 -- ============================================================================
 -- v1.2.0 版本信息更新
 -- ============================================================================
-Config.Version = "1.2.0"
-Config.ReleaseDate = "2026-08-19"
+Config.Version = "1.3.0"
+Config.ReleaseDate = "2026-06-19"
 Config.ReleaseNotes = [=[
 v1.2.0 主要更新：
   · 锦标赛系统（单败淘汰制，8/16 人参赛）

@@ -458,11 +458,29 @@ function AchievementSystem._CheckAllAchievements(uid)
     local newlyUnlocked = {}
     local events = Config.Achievements
 
-    if not events or #events == 0 then
+    -- 合并所有成就表 (v1.0, v1.1, v1.3)
+    local allAchievements = {}
+    if Config.Achievements then
+        for _, a in ipairs(Config.Achievements) do
+            table.insert(allAchievements, a)
+        end
+    end
+    if Config.EquipmentAchievements then
+        for _, a in ipairs(Config.EquipmentAchievements) do
+            table.insert(allAchievements, a)
+        end
+    end
+    if Config.GuildAchievements then
+        for _, a in ipairs(Config.GuildAchievements) do
+            table.insert(allAchievements, a)
+        end
+    end
+
+    if #allAchievements == 0 then
         return newlyUnlocked
     end
 
-    for _, achievement in ipairs(events) do
+    for _, achievement in ipairs(allAchievements) do
         if not unlocked[achievement.id] then
             local ok = AchievementSystem._CheckCondition(achievement, stats)
             if ok then
@@ -657,7 +675,16 @@ function AchievementSystem.GetAchievementList(uid)
     local stats = _GetStats(uid)
     local list = {}
 
-    local achievements = Config.Achievements or {}
+    local achievements = {}
+    if Config.Achievements then
+        for _, a in ipairs(Config.Achievements) do table.insert(achievements, a) end
+    end
+    if Config.EquipmentAchievements then
+        for _, a in ipairs(Config.EquipmentAchievements) do table.insert(achievements, a) end
+    end
+    if Config.GuildAchievements then
+        for _, a in ipairs(Config.GuildAchievements) do table.insert(achievements, a) end
+    end
 
     for _, achievement in ipairs(achievements) do
         local progress = 0
@@ -880,6 +907,14 @@ function AchievementSystem.RegisterEvents()
     EventBus.Subscribe(EventBus.Events.GUILD_WAR_END, function(data)
         if data and data.winnerGuildId then
             -- 实际应用中需要根据公会成员列表更新每个成员的战胜场
+        end
+    end, "AchievementSystem")
+
+    -- 监听装备装备（v1.3 EquipmentSystem）
+    EventBus.Subscribe(EventBus.Events.EQUIPMENT_EQUIP, function(data)
+        if data and data.uid then
+            -- 装备了一件装备时，更新装备装备次数
+            AchievementSystem.RecordEquipmentEquip(data.uid, data.equippedCount or data.slot)
         end
     end, "AchievementSystem")
 

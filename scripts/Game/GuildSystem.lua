@@ -185,6 +185,13 @@ function GuildSystem.InviteMember(guildId, inviterUid, targetUid)
         timestamp = _Now(),
     }
 
+    -- 发布事件
+    EventBus.Publish(EventBus.Events.GUILD_INVITE, {
+        guildId = guildId,
+        inviterUid = inviterUid,
+        targetUid = targetUid,
+    })
+
     print(string.format("[GuildSystem] 邀请发送: %s -> %s (guild=%s)", tostring(inviterUid), tostring(targetUid), guildId))
     return true
 end
@@ -313,6 +320,14 @@ function GuildSystem.KickMember(guildId, kickerUid, targetUid)
     end
     guild.memberCount = #guild.members
     _playerGuilds[targetUid] = nil
+
+    -- 发布事件
+    EventBus.Publish(EventBus.Events.GUILD_KICK, {
+        guildId = guildId,
+        targetUid = targetUid,
+        kickerUid = kickerUid,
+        role = targetRole,
+    })
 
     print(string.format("[GuildSystem] 玩家 %s 被踢出公会 %s (by %s)", tostring(targetUid), guildId, tostring(kickerUid)))
     return true
@@ -584,6 +599,18 @@ function GuildSystem.PurchaseShopItem(guildId, uid, itemId)
     end
 
     print(string.format("[GuildSystem] 玩家 %s 购买了 %s (花费 %d 贡献)", tostring(uid), shopItem.name, shopItem.cost))
+
+    -- 发布事件
+    EventBus.Publish(EventBus.Events.GUILD_SHOP_PURCHASE, {
+        guildId = guildId,
+        uid = uid,
+        itemId = itemId,
+        itemName = shopItem.name,
+        cost = shopItem.cost,
+        rewardType = shopItem.rewardType or shopItem.reward and shopItem.reward.type or "unknown",
+        reward = shopItem.reward,
+    })
+
     return true, shopItem.reward
 end
 

@@ -237,11 +237,15 @@ function SeasonSystem.GetReward(level)
             [10] = { type = "gold", amount = 500,  name = "小有所成" },
             [15] = { type = "item", rarity = 2,    name = "稀有藏品" },
             [20] = { type = "gold", amount = 1000, name = "经验丰富" },
-            [25] = { type = "title", id = "T001",  name = "竞拍达人" },
+            [25] = { type = "title", id = "T001", name = "竞拍达人" },
+            [27] = { type = "equipment", equipmentId = "weapon_gold_sword", name = "金币剑" },
             [30] = { type = "gold", amount = 2000, name = "精英收藏家" },
-            [35] = { type = "item", rarity = 3,    name = "史诗藏品" },
+            [35] = { type = "item", rarity = 3, name = "史诗藏品" },
+            [37] = { type = "equipment", equipmentId = "acc_lucky_coin", name = "幸运硬币" },
             [40] = { type = "gold", amount = 5000, name = "大师级别" },
-            [45] = { type = "title", id = "T002",  name = "传奇收藏家" },
+            [42] = { type = "equipment", equipmentId = "armor_leather_vest", name = "皮甲背心" },
+            [45] = { type = "title", id = "T002", name = "传奇收藏家" },
+            [47] = { type = "equipment", equipmentId = "badge_silver_star", name = "银星徽章" },
             [50] = { type = "item", rarity = 4,    name = "传说藏品" }
         }
         return rewards[level]
@@ -290,6 +294,28 @@ function SeasonSystem.ClaimReward(playerId, level)
     table.insert(data.claimedRewards, level)
 
     _SaveSeasonData(playerId, data)
+
+    -- 如果是装备类型，自动解锁
+    if reward.type == "equipment" and reward.equipmentId then
+        -- 检查是否有 EquipmentSystem
+        local ok, err = pcall(function()
+            if EquipmentSystem then
+                local unlockOk, err2 = EquipmentSystem.Unlock(playerId, reward.equipmentId)
+                print("[SeasonSystem] 🔧 装备解锁: " .. reward.equipmentId .. " (uid=" .. tostring(playerId) .. ")")
+            end
+        end)
+    end
+
+    -- 发布奖励领取事件
+    EventBus.Publish(EventBus.Events.SEASON_LEVELUP, {
+        uid = playerId,
+        level = level,
+        rewardType = reward.type,
+        rewardAmount = reward.amount,
+        rewardEquipment = reward.equipmentId,
+        rewardName = reward.name,
+        rewardRarity = reward.rarity,
+    })
 
     print("[SeasonSystem] 🏆 " .. (playerId or "玩家") .. " 领取 " .. level .. " 级奖励：" .. reward.name)
 
