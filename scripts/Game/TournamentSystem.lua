@@ -155,7 +155,7 @@ function TournamentSystem.Register(tournamentId, uid, nickname)
         status = "registered"
     }
 
-    EventBus.Publish("tournament_player_registered", {
+    EventBus.Publish(EventBus.Events.TOURNAMENT_REGISTER, {
         tournamentId = tournamentId,
         uid = uid,
         playerCount = tournament.playerCount
@@ -186,6 +186,12 @@ function TournamentSystem.StartTournament(tournamentId)
 
     tournament.status = TournamentSystem.Status.IN_PROGRESS
     tournament.startedAt = _Now()
+
+    EventBus.Publish(EventBus.Events.TOURNAMENT_START, {
+        tournamentId = tournamentId,
+        playerCount = tournament.playerCount,
+        maxPlayers = tournament.maxPlayers
+    })
 
     -- 生成对阵表
     local rounds = math.ceil(math.log(tournament.maxPlayers, 2))
@@ -332,7 +338,7 @@ function TournamentSystem.SubmitMatchResult(tournamentId, matchId, winnerUid)
         winner.roundWins = (winner.roundWins or 0) + 1
     end
 
-    EventBus.Publish("tournament_match_completed", {
+    EventBus.Publish(EventBus.Events.TOURNAMENT_MATCH_RESULT, {
         tournamentId = tournamentId,
         matchId = matchId,
         winnerUid = winnerUid,
@@ -427,26 +433,39 @@ function TournamentSystem._CompleteTournament(tournament, winnerUid)
 
     -- 发放奖励
     if tournament.rewards[1] then
-        EventBus.Publish("tournament_reward", {
+        EventBus.Publish(EventBus.Events.TOURNAMENT_WIN, {
             tournamentId = tournament.id,
             uid = winnerUid,
             place = 1,
             reward = tournament.rewards[1].reward,
             title = tournament.rewards[1].title
         })
+
+        -- 锦标赛胜利触发赛季经验（v1.1 系统集成）
+        EventBus.Publish(EventBus.Events.SEASON_PROGRESS, {
+            uid = winnerUid,
+            xp = 50,
+            source = "tournament_win"
+        })
     end
 
     if runnerUp and tournament.rewards[2] then
-        EventBus.Publish("tournament_reward", {
+        EventBus.Publish(EventBus.Events.TOURNAMENT_WIN, {
             tournamentId = tournament.id,
             uid = runnerUp.uid,
             place = 2,
             reward = tournament.rewards[2].reward,
             title = tournament.rewards[2].title
         })
+
+        EventBus.Publish(EventBus.Events.SEASON_PROGRESS, {
+            uid = runnerUp.uid,
+            xp = 20,
+            source = "tournament_runnerup"
+        })
     end
 
-    EventBus.Publish("tournament_completed", {
+    EventBus.Publish(EventBus.Events.TOURNAMENT_END, {
         tournamentId = tournament.id,
         winner = winnerUid,
         totalRounds = #tournament.rounds
@@ -576,6 +595,16 @@ end
 -- 注册事件监听
 -- ============================================================================
 function TournamentSystem.RegisterEvents()
+    -- 订阅赛季系统事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.SEASON_LEVELUP, function(data)
+        print("[TournamentSystem] 赛季升级，解锁新锦标赛资格: " .. tostring(data.uid))
+    end, "TournamentSystem")
+
+    -- 订阅任务完成事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.MISSION_COMPLETE, function(data)
+        print("[TournamentSystem] 任务完成，玩家可参加特殊锦标赛: " .. tostring(data.uid))
+    end, "TournamentSystem")
+
     print("[TournamentSystem] 事件监听已注册")
 end
 

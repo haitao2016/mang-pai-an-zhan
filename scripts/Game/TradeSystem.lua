@@ -114,7 +114,7 @@ function TradeSystem.CreateListing(sellerUid, itemId, itemData, price)
     end
     table.insert(_playerListings[sellerUid], listingId)
 
-    EventBus.Publish("listing_created", {
+    EventBus.Publish(EventBus.Events.TRADE_LISTING, {
         listingId = listingId,
         sellerUid = sellerUid,
         itemName = listing.itemName,
@@ -201,13 +201,21 @@ function TradeSystem.Purchase(buyerUid, listingId)
         end
     end
 
-    EventBus.Publish("trade_completed", {
+    EventBus.Publish(EventBus.Events.TRADE_PURCHASE, {
         tradeId = tradeId,
         buyerUid = buyerUid,
         sellerUid = listing.sellerUid,
         itemName = listing.itemName,
         price = listing.price,
         fee = fee
+    })
+
+    -- 交易成功触发藏品收集事件（v1.1 系统集成）
+    EventBus.Publish(EventBus.Events.ITEM_COLLECT, {
+        uid = buyerUid,
+        itemName = listing.itemName,
+        itemRarity = listing.itemRarity,
+        source = "trade_market"
     })
 
     print("[Trade] 交易完成: " .. tradeId .. " - " .. listing.itemName .. "，" .. tostring(buyerUid) .. " 购买")
@@ -252,7 +260,7 @@ function TradeSystem.CancelListing(uid, listingId)
         end
     end
 
-    EventBus.Publish("listing_cancelled", {
+    EventBus.Publish(EventBus.Events.TRADE_CANCEL, {
         listingId = listingId,
         uid = uid
     })
@@ -407,7 +415,7 @@ function TradeSystem.BlockPlayer(uid, blockedUid)
 
     table.insert(_blacklist[uid], blockedUid)
 
-    EventBus.Publish("player_blocked", {
+    EventBus.Publish(EventBus.Events.TRADE_BLOCK, {
         uid = uid,
         blockedUid = blockedUid
     })
@@ -514,6 +522,21 @@ end
 -- 注册事件监听
 -- ============================================================================
 function TradeSystem.RegisterEvents()
+    -- 订阅赛季系统事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.SEASON_LEVELUP, function(data)
+        print("[TradeSystem] 赛季升级，解锁更高等级的藏品交易: " .. tostring(data.uid))
+    end, "TradeSystem")
+
+    -- 订阅藏品相关事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.ITEM_COLLECT, function(data)
+        print("[TradeSystem] 玩家获得藏品，可上架市场: " .. tostring(data.uid))
+    end, "TradeSystem")
+
+    -- 订阅成就事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.ACHIEVEMENT_UNLOCK, function(data)
+        print("[TradeSystem] 成就解锁，获得藏品加成: " .. tostring(data.uid))
+    end, "TradeSystem")
+
     print("[TradeSystem] 事件监听已注册")
 end
 

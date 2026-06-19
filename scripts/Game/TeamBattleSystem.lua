@@ -120,7 +120,7 @@ function TeamBattleSystem.CreateTeam(captainUid, options)
     _teams[teamId] = team
     _playerTeams[captainUid] = teamId
 
-    EventBus.Publish("team_created", {
+    EventBus.Publish(EventBus.Events.TEAM_CREATE, {
         teamId = teamId,
         name = team.name,
         captain = captainUid
@@ -192,7 +192,7 @@ function TeamBattleSystem.JoinTeam(teamId, uid)
 
     _playerTeams[uid] = teamId
 
-    EventBus.Publish("team_member_joined", {
+    EventBus.Publish(EventBus.Events.TEAM_JOIN, {
         teamId = teamId,
         uid = uid,
         memberCount = #team.members
@@ -366,7 +366,7 @@ function TeamBattleSystem.StartMatch(matchId)
     match.startedAt = _Now()
     match.currentRound = 1
 
-    EventBus.Publish("team_match_started", {
+    EventBus.Publish(EventBus.Events.TEAM_START, {
         matchId = matchId,
         rounds = match.config.rounds
     })
@@ -561,18 +561,25 @@ function TeamBattleSystem.EndMatch(matchId)
         for _, member in ipairs(winnerTeam.members) do
             member.stats.gamesPlayed = member.stats.gamesPlayed + 1
             member.stats.wins = member.stats.wins + 1
+
+            -- 团队战胜利触发赛季经验（v1.1 系统集成）
+            EventBus.Publish(EventBus.Events.SEASON_PROGRESS, {
+                uid = member.uid,
+                xp = 30,
+                source = "team_win"
+            })
         end
         for _, member in ipairs(loserTeam.members) do
             member.stats.gamesPlayed = member.stats.gamesPlayed + 1
         end
-    end
 
-    EventBus.Publish("team_match_ended", {
-        matchId = matchId,
-        winner = match.winner,
-        redScore = match.redTeam.totalValue,
-        blueScore = match.blueTeam.totalValue
-    })
+        EventBus.Publish(EventBus.Events.TEAM_WIN, {
+            matchId = matchId,
+            winnerTeamId = match.winner,
+            redScore = match.redTeam.totalValue,
+            blueScore = match.blueTeam.totalValue
+        })
+    end
 
     print("[TeamBattle] 团队战结束: " .. matchId .. "，胜者: " .. tostring(match.winner))
     return true
@@ -615,7 +622,7 @@ function TeamBattleSystem.UseTeamSkill(matchId, uid, skillId)
 
     teamSkill.used = true
 
-    EventBus.Publish("team_skill_used", {
+    EventBus.Publish(EventBus.Events.TEAM_SKILL_USE, {
         matchId = matchId,
         teamId = match[teamKey].id,
         uid = uid,
@@ -674,6 +681,16 @@ end
 -- 注册事件监听
 -- ============================================================================
 function TeamBattleSystem.RegisterEvents()
+    -- 订阅赛季系统事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.SEASON_LEVELUP, function(data)
+        print("[TeamBattleSystem] 赛季升级，解锁团队战奖励: " .. tostring(data.uid))
+    end, "TeamBattleSystem")
+
+    -- 订阅锦标赛事件（v1.2 集成）
+    EventBus.Subscribe(EventBus.Events.TOURNAMENT_WIN, function(data)
+        print("[TeamBattleSystem] 锦标赛胜利提升团队排名，玩家: " .. tostring(data.uid))
+    end, "TeamBattleSystem")
+
     print("[TeamBattleSystem] 事件监听已注册")
 end
 

@@ -55,11 +55,37 @@ EventBus.Events = {
     SKILL_USE       = "skill_use",       -- 技能使用
     SKILL_RESULT    = "skill_result",    -- 技能生效
 
-    -- --- 成就与任务 ---
+    -- --- 赛季系统（v1.1）---
     ACHIEVEMENT_UNLOCK = "achievement_unlock", -- 成就解锁
     MISSION_COMPLETE   = "mission_complete",   -- 任务完成
     SEASON_PROGRESS    = "season_progress",    -- 赛季进度更新
     SEASON_LEVELUP     = "season_levelup",     -- 赛季升级
+
+    -- --- 锦标赛系统（v1.2）---
+    TOURNAMENT_START   = "tournament_start",    -- 锦标赛开始
+    TOURNAMENT_END     = "tournament_end",      -- 锦标赛结束
+    TOURNAMENT_WIN     = "tournament_win",      -- 锦标赛胜利
+    TOURNAMENT_REGISTER = "tournament_register", -- 锦标赛报名
+    TOURNAMENT_MATCH_RESULT = "tournament_match_result", -- 比赛结果
+
+    -- --- 团队战系统（v1.2）---
+    TEAM_CREATE        = "team_create",         -- 创建团队
+    TEAM_JOIN          = "team_join",           -- 加入团队
+    TEAM_LEAVE         = "team_leave",          -- 离开团队
+    TEAM_START         = "team_match_start",    -- 团队战开始
+    TEAM_WIN           = "team_match_win",      -- 团队战胜利
+    TEAM_SKILL_USE     = "team_skill_use",      -- 团队技能使用
+
+    -- --- 交易市场系统（v1.2）---
+    TRADE_LISTING      = "trade_listing",       -- 挂单上架
+    TRADE_PURCHASE     = "trade_purchase",      -- 购买藏品
+    TRADE_CANCEL       = "trade_cancel",        -- 取消挂单
+    TRADE_BLOCK        = "trade_block",         -- 拉黑玩家
+
+    -- --- 皮肤系统（v1.2）---
+    SKIN_UNLOCK        = "skin_unlock",         -- 皮肤解锁
+    SKIN_EQUIP         = "skin_equip",          -- 装备皮肤
+    SKIN_SET_COMPLETE  = "skin_set_complete",   -- 皮肤套装完成
 
     -- --- 系统相关 ---
     SYSTEM_INIT     = "system_init",     -- 系统初始化完成

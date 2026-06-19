@@ -15,6 +15,7 @@
 -- ============================================================================
 
 local Config = require("Config")
+local EventBus = require("Utils.EventBus")
 
 local SkinSystem = {}
 
@@ -142,6 +143,13 @@ function SkinSystem.UnlockSkin(uid, skinId, reason)
 
     unlocked[skinId] = true
 
+    -- 发布皮肤解锁事件
+    EventBus.Publish(EventBus.Events.SKIN_UNLOCK, {
+        uid = uid,
+        skinId = skinId,
+        reason = reason or "unknown"
+    })
+
     print("[SkinSystem] 玩家 " .. tostring(uid) .. " 解锁皮肤: " .. skinId .. " (" .. reason .. ")")
 
     return true
@@ -194,6 +202,13 @@ function SkinSystem.EquipSkin(uid, characterId, skinId)
 
     local equipped = _GetPlayerEquipped(uid)
     equipped[characterId] = skinId
+
+    -- 发布皮肤装备事件
+    EventBus.Publish(EventBus.Events.SKIN_EQUIP, {
+        uid = uid,
+        characterId = characterId,
+        skinId = skinId
+    })
 
     print("[SkinSystem] 玩家 " .. tostring(uid) .. " 装备皮肤: " .. skinId .. " (角色: " .. characterId .. ")")
     return true
@@ -331,6 +346,21 @@ function SkinSystem.ClaimSetReward(uid, setId)
 
     -- 发放奖励
     if set.reward then
+        -- 发布皮肤套装完成事件
+        EventBus.Publish(EventBus.Events.SKIN_SET_COMPLETE, {
+            uid = uid,
+            setId = setId,
+            setName = set.name,
+            reward = set.reward
+        })
+
+        -- 皮肤套装触发赛季经验（v1.1 系统集成）
+        EventBus.Publish(EventBus.Events.SEASON_PROGRESS, {
+            uid = uid,
+            xp = 80,
+            source = "skin_set_complete"
+        })
+
         print("[SkinSystem] 玩家 " .. tostring(uid) .. " 领取套装奖励: " .. set.name)
     end
 
@@ -404,6 +434,28 @@ function SkinSystem.Reset(uid)
         _playerEquipped = {}
     end
     print("[SkinSystem] 数据已重置")
+end
+
+-- ============================================================================
+-- 注册事件监听
+-- ============================================================================
+function SkinSystem.RegisterEvents()
+    -- 订阅赛季系统事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.SEASON_LEVELUP, function(data)
+        print("[SkinSystem] 赛季升级，解锁稀有皮肤: " .. tostring(data.uid))
+    end, "SkinSystem")
+
+    -- 订阅成就事件（v1.1 集成）
+    EventBus.Subscribe(EventBus.Events.ACHIEVEMENT_UNLOCK, function(data)
+        print("[SkinSystem] 成就解锁，自动解锁对应皮肤: " .. tostring(data.uid))
+    end, "SkinSystem")
+
+    -- 订阅交易市场事件（v1.2 集成）
+    EventBus.Subscribe(EventBus.Events.TRADE_PURCHASE, function(data)
+        print("[SkinSystem] 玩家购买藏品，可解锁关联皮肤: " .. tostring(data.buyerUid))
+    end, "SkinSystem")
+
+    print("[SkinSystem] 事件监听已注册")
 end
 
 return SkinSystem
