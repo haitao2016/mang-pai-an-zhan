@@ -6,8 +6,8 @@ local Config = {}
 
 -- 游戏基本信息
 Config.Title = "盲拍暗战"
-Config.Version = "1.0.0"
-Config.ReleaseDate = "2026-06-19"
+Config.Version = "1.1.0"
+Config.ReleaseDate = "2026-07-19"
 Config.ScreenOrientation = "landscape"  -- 横屏（移动端更适合竞拍操作）
 
 -- ============================================================================
