@@ -347,4 +347,122 @@ function CharacterSystem:GetActiveSkillStatus(seatIdx)
     }
 end
 
+-- ============================================================================
+-- v1.1.0 新增：合作被动机制
+-- ============================================================================
+
+--- 检测本局激活的合作被动组合
+---@param charIds table  所有玩家的角色 ID 列表
+---@return table  激活的合作被动列表 { { synergyId, name, desc, effect, char1, char2 } }
+function CharacterSystem.GetActiveSynergies(charIds)
+    local result = {}
+    if not Config.CharacterSynergies then return result end
+
+    for _, synergy in ipairs(Config.CharacterSynergies) do
+        local chars = synergy.chars
+        local matched = {}
+
+        for _, requiredChar in ipairs(chars) do
+            for _, charId in ipairs(charIds) do
+                -- 支持按角色 ID 或索引匹配
+                local charIndex = CharacterData.GetCharacterIndex(charId)
+                if charIndex == requiredChar or charId == requiredChar then
+                    table.insert(matched, charId)
+                    break
+                end
+            end
+        end
+
+        -- 如果所有要求的角色都存在，则激活
+        if #matched == #chars then
+            table.insert(result, {
+                synergyId = synergy.name,
+                name = synergy.name,
+                desc = synergy.desc,
+                effect = synergy.effect,
+                chars = matched,
+                isActive = true
+            })
+        end
+    end
+
+    return result
+end
+
+--- 应用合作被动的效果（如游戏开始时的余额加成）
+---@param charIds table  所有玩家的角色 ID 列表
+---@return table  每个玩家的初始加成 { [seatIdx] = { type, amount, source } }
+function CharacterSystem.ApplySynergyEffects(charIds)
+    local effects = {}
+    local synergies = CharacterSystem.GetActiveSynergies(charIds)
+
+    for _, synergy in ipairs(synergies) do
+        local effect = synergy.effect
+        if effect and effect.type then
+            -- 根据效果类型应用到所有参与者
+            for seatIdx, charId in ipairs(charIds) do
+                for _, requiredChar in ipairs(synergy.chars) do
+                    local charIndex = CharacterData.GetCharacterIndex(charId)
+                    if charIndex == requiredChar or charId == requiredChar then
+                        effects[seatIdx] = effects[seatIdx] or {}
+                        if effect.type == "balance" or effect.type == "per_round_balance" then
+                            table.insert(effects[seatIdx], {
+                                type = effect.type,
+                                amount = effect.amount,
+                                source = "synergy_" .. synergy.name,
+                                trigger = "game_start"  -- 立即触发
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return effects
+end
+
+--- 获取合作被动的描述文本
+---@param charIds table
+---@return table  { synergyName, synergyDesc, synergyIcon }
+function CharacterSystem.GetSynergyInfo(charIds)
+    local synergies = CharacterSystem.GetActiveSynergies(charIds)
+    if #synergies == 0 then
+        return nil
+    end
+
+    local names = {}
+    local descs = {}
+    for _, s in ipairs(synergies) do
+        table.insert(names, s.name)
+        table.insert(descs, s.name .. "：" .. s.desc)
+    end
+
+    return {
+        synergyName = table.concat(names, " + "),
+        synergyDesc = table.concat(descs, "\n"),
+        synergyIcon = "synergy_active",
+        count = #synergies
+    }
+end
+
+--- 获取所有可用的合作被动组合配置
+---@return table
+function CharacterSystem.GetAllSynergyConfigs()
+    if not Config.CharacterSynergies then
+        return {}
+    end
+    local result = {}
+    for _, s in ipairs(Config.CharacterSynergies) do
+        table.insert(result, {
+            id = s.name,
+            name = s.name,
+            desc = s.desc,
+            chars = s.chars,
+            effect = s.effect
+        })
+    end
+    return result
+end
+
 return CharacterSystem
