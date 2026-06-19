@@ -9,6 +9,7 @@
 local UI     = require("urhox-libs/UI")
 local Config = require("Config")
 local Helper = require("Utils.Helper")
+local UIUtils = require("Utils.UIUtils")
 local CharacterData = require("Data.CharacterData")
 
 local GameUI = {}

@@ -6,8 +6,9 @@ local Config = {}
 
 -- 游戏基本信息
 Config.Title = "盲拍暗战"
-Config.Version = "0.1.0"
-Config.ScreenOrientation = "portrait"  -- 竖屏
+Config.Version = "1.0.0"
+Config.ReleaseDate = "2026-06-19"
+Config.ScreenOrientation = "landscape"  -- 横屏（移动端更适合竞拍操作）
 
 -- ============================================================================
 -- 竞拍规则
@@ -176,6 +177,146 @@ Config.GameState = {
     SETTLING       = "settling",       -- 结算中
     REVEALING      = "revealing",      -- 开箱展示
     GAME_OVER      = "game_over",      -- 比赛结束
+}
+
+-- ============================================================================
+-- v1.0.0 新增：成就系统
+-- ============================================================================
+Config.Achievements = {
+    {
+        id = "first_win",
+        name = "初次胜利",
+        desc = "赢得第一场比赛。",
+        reward = 1000,
+        checkType = "win_count",
+        checkValue = 1,
+    },
+    {
+        id = "ten_wins",
+        name = "小有所成",
+        desc = "累计获胜10场。",
+        reward = 5000,
+        checkType = "win_count",
+        checkValue = 10,
+    },
+    {
+        id = "speed_win",
+        name = "速胜专家",
+        desc = "触发一次速胜。",
+        reward = 500,
+        checkType = "speed_win_count",
+        checkValue = 1,
+    },
+    {
+        id = "collect_100",
+        name = "收藏家",
+        desc = "累计收藏100件藏品。",
+        reward = 2000,
+        checkType = "collected_items",
+        checkValue = 100,
+    },
+    {
+        id = "legend_first",
+        name = "传奇首现",
+        desc = "首次获得传说级藏品。",
+        reward = 3000,
+        checkType = "legend_count",
+        checkValue = 1,
+    },
+    {
+        id = "bid_master",
+        name = "精准出价",
+        desc = "单局5次出价均排前2名。",
+        reward = 1500,
+        checkType = "top2_rounds",
+        checkValue = 5,
+    },
+    {
+        id = "frugal",
+        name = "精打细算",
+        desc = "单局结束时余额大于初始资金。",
+        reward = 1000,
+        checkType = "positive_gain",
+        checkValue = 1,
+    },
+    {
+        id = "hall_master",
+        name = "殿堂级藏家",
+        desc = "在所有4个拍卖厅都获胜过。",
+        reward = 5000,
+        checkType = "hall_victory",
+        checkValue = 4,
+    },
+    {
+        id = "hundred_games",
+        name = "百战不殆",
+        desc = "累计参与100局比赛。",
+        reward = 8000,
+        checkType = "game_count",
+        checkValue = 100,
+    },
+    {
+        id = "rich_collector",
+        name = "财大气粗",
+        desc = "累计收藏藏品总价值超过10万。",
+        reward = 10000,
+        checkType = "collection_value",
+        checkValue = 100000,
+    },
+}
+
+-- ============================================================================
+-- v1.0.0 新增：每日任务系统
+-- ============================================================================
+Config.DailyMissions = {
+    {
+        id = "daily_first_win",
+        name = "每日首胜",
+        desc = "赢得1场比赛。",
+        reward = 500,
+        checkType = "win_count",
+        checkValue = 1,
+        refreshDaily = true,
+    },
+    {
+        id = "daily_three_games",
+        name = "参与三局",
+        desc = "完成3场比赛。",
+        reward = 300,
+        checkType = "game_count",
+        checkValue = 3,
+        refreshDaily = true,
+    },
+    {
+        id = "daily_use_skills",
+        name = "技能大师",
+        desc = "单场使用5次主动技能。",
+        reward = 200,
+        checkType = "skill_uses",
+        checkValue = 5,
+        refreshDaily = true,
+    },
+    {
+        id = "daily_legend_item",
+        name = "开箱乐趣",
+        desc = "获得一件传说级藏品。",
+        reward = 800,
+        checkType = "legend_count",
+        checkValue = 1,
+        refreshDaily = true,
+    },
+}
+
+-- ============================================================================
+-- v1.0.0 新增：动画时长统一
+-- ============================================================================
+Config.Animations = {
+    UITransition   = 0.3,    -- UI 过渡动画（秒）
+    BidSubmit      = 0.5,    -- 出价提交动画
+    RevealItem     = 0.8,    -- 开箱揭示动画
+    FadeInOut      = 0.2,    -- 淡入淡出
+    ToastDuration  = 2.0,    -- Toast 显示时间
+    ToastFast      = 1.0,    -- 快速 Toast
 }
 
 return Config

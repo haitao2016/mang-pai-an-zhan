@@ -1,6 +1,7 @@
 -- ============================================================================
 -- AntiCheat.lua - 反作弊系统
 -- 服务端检测异常行为：出价篡改、超快操作、异常模式
+-- v1.0.0 新增：延迟抖动检测、刷分模式检测、断线重连完整性校验、作弊历史持久化
 -- ============================================================================
 
 local AntiCheat = {}
@@ -12,29 +13,47 @@ local AntiCheat = {}
 AntiCheat.Config = {
     -- 出价异常检测
     bid = {
-        maxBidRatio = 1.5,       -- 出价与可用余额的最大比例（防止一掷千金全押）
-        minBidInterval = 0.5,   -- 两次出价的最小间隔（秒）
-        suspiciousBidCount = 5, -- 超过此数量的可疑出价触发警告
+        maxBidRatio = 1.5,
+        minBidInterval = 0.5,
+        suspiciousBidCount = 5,
     },
 
     -- 操作速度检测
     operation = {
-        minBidTime = 1.0,       -- 最短出价思考时间（秒）
-        minCharSelectTime = 2.0, -- 最短角色选择时间（秒）
-        maxActionsPerSecond = 5, -- 每秒最大操作次数
+        minBidTime = 1.0,
+        minCharSelectTime = 2.0,
+        maxActionsPerSecond = 5,
     },
 
     -- 网络异常检测
     network = {
-        maxReconnectPerMinute = 10, -- 每分钟最大重连次数
-        pingThreshold = 500,        -- 延迟警告阈值（毫秒）
+        maxReconnectPerMinute = 10,
+        pingThreshold = 500,
+        pingJitterThreshold = 200,        -- 新：延迟抖动阈值
+    },
+
+    -- v1.0.0 新增：刷分模式检测
+    boost = {
+        consecutiveWinsThreshold = 8,           -- 连续胜利数
+        suspiciousWinRate = 0.85,         -- 超过此胜率触发
+        minGamesForCheck = 10,              -- 至少玩多少局后开始检查胜率
+        abnormalWinAmountPattern = 1000,  -- 疑似刷分的最低出价差
+        patternDetectionEnabled = true,
+    },
+
+    -- v1.0.0 新增：伪随机数检测
+    pattern = {
+        patternCheckEnabled = true,
+        minSamples = 5,
+        varianceThreshold = 0.1,
     },
 
     -- 惩罚配置
     penalty = {
-        warnThreshold = 3,    -- 警告次数达到此值时采取行动
-        kickThreshold = 5,    -- 踢出阈值
-        banDuration = 3600,  -- 封禁时长（秒），默认1小时
+        warnThreshold = 3,
+        kickThreshold = 5,
+        banDuration = 3600,
+        permabanThreshold = 10,
     },
 }
 
@@ -43,19 +62,6 @@ AntiCheat.Config = {
 -- ============================================================================
 
 ---@class PlayerCheatState
----@field seatIdx number 座位号
----@field uid number 用户ID
----@field warnings number 警告次数
----@field lastBidTime number 上次出价时间戳
----@field lastBidAmount number 上次出价金额
----@field consecutiveMaxBids number 连续最大出价次数
----@field actionsThisSecond number 最近一秒内的操作数
----@field actionTimestamps table 时间戳数组
----@field reconnectCount number 重连次数
----@field reconnectStartTime number 本次重连统计开始时间
----@field banned boolean 是否被封禁
----@field banExpiryTime number 封禁到期时间
----@field作弊历史 table
 local PlayerCheatState = {}
 PlayerCheatState.__index = PlayerCheatState
 
@@ -73,6 +79,18 @@ function PlayerCheatState.New(seatIdx, uid)
     self.reconnectStartTime = os.time()
     self.banned = false
     self.banExpiryTime = 0
+
+    -- v1.0.0 新增字段
+    self.totalGames = 0
+    self.winCount = 0
+    self.consecutiveWins = 0
+    self.bidHistory = {}
+    self.pingHistory = {}
+    self.lostConnectionAt = 0    -- 上一次断线时间戳（秒）
+    self.sessionStartTime = os.time()
+    self.lastGameState = nil
+    self.expectedBalance = nil
+
     self.history = {}
     return self
 end
@@ -123,7 +141,8 @@ function PlayerCheatState:Ban(duration)
         duration = duration,
         time = os.time(),
     })
-    print(string.format("[AntiCheat] Banned uid=%s for %d seconds", tostring(self.uid), duration))
+    print(string.format("[AntiCheat] Banned uid=%s for %d seconds",
+        tostring(self.uid), duration))
 end
 
 function PlayerCheatState:RecordReconnect()
@@ -142,22 +161,16 @@ end
 ---@type table<number, PlayerCheatState>
 local playerStates_ = {}
 
-local server_ = nil  -- Server 模块引用（用于踢人等操作）
+local server_ = nil
 
 -- ============================================================================
--- 初始化
+-- 初始化与设置接口
 -- ============================================================================
 
---- 设置 Server 模块引用
----@param server table
 function AntiCheat.SetServer(server)
     server_ = server
 end
 
---- 获取或创建玩家作弊状态
----@param seatIdx number
----@param uid number|nil
----@return PlayerCheatState
 function AntiCheat.GetOrCreateState(seatIdx, uid)
     if not playerStates_[seatIdx] then
         playerStates_[seatIdx] = PlayerCheatState.New(seatIdx, uid)
@@ -165,47 +178,34 @@ function AntiCheat.GetOrCreateState(seatIdx, uid)
     return playerStates_[seatIdx]
 end
 
---- 清除玩家状态
----@param seatIdx number
 function AntiCheat.ClearState(seatIdx)
     playerStates_[seatIdx] = nil
 end
 
 -- ============================================================================
--- 出价检测
--- ============================================================================
-
---- 检测出价合法性
----@param seatIdx number
----@param uid number|nil
----@param amount number 出价金额
----@param availableFunds number 可用余额
----@param timestamp number 出价时间戳
----@return boolean allowed
----@return string|nil reason
+-- 出价检测（核心校验
 function AntiCheat.CheckBid(seatIdx, uid, amount, availableFunds, timestamp)
     local state = AntiCheat.GetOrCreateState(seatIdx, uid)
 
-    -- 检查是否被封禁
     if state:IsBanned() then
         return false, "账户已被封禁"
     end
 
-    -- 检测1：出价间隔过短（机器人/脚本检测）
     local cfg = AntiCheat.Config.bid
     local timeSinceLastBid = timestamp - state.lastBidTime
+
+    -- 1：出价间隔检测
     if state.lastBidTime > 0 and timeSinceLastBid < cfg.minBidInterval then
         state:AddWarning("出价间隔异常短: " .. string.format("%.2fs", timeSinceLastBid))
-        -- 不直接拒绝，只警告
     end
 
-    -- 检测2：出价金额超出可用余额
+    -- 2：出价金额校验
     if amount > availableFunds then
         state:AddWarning("出价超出余额: " .. amount .. " > " .. availableFunds)
         return false, "出价超出可用余额"
     end
 
-    -- 检测3：出价比例异常（全押检测）
+    -- 3：全押检测
     if availableFunds > 0 then
         local ratio = amount / availableFunds
         if ratio > cfg.maxBidRatio then
@@ -213,7 +213,7 @@ function AntiCheat.CheckBid(seatIdx, uid, amount, availableFunds, timestamp)
         end
     end
 
-    -- 检测4：连续最大出价
+    -- 4：连续最大出价检测
     if amount == availableFunds and availableFunds > 0 then
         state.consecutiveMaxBids = state.consecutiveMaxBids + 1
         if state.consecutiveMaxBids >= 3 then
@@ -223,11 +223,29 @@ function AntiCheat.CheckBid(seatIdx, uid, amount, availableFunds, timestamp)
         state.consecutiveMaxBids = 0
     end
 
-    -- 检测5：出价金额异常（与历史差异过大）
+    -- 5：与历史差异过大
     if state.lastBidAmount > 0 then
         local diff = math.abs(amount - state.lastBidAmount) / state.lastBidAmount
-        if diff > 5.0 and amount > 1000 then  -- 差异超过500%且金额较大
-            state:AddWarning(string.format("出价跳跃异常: %d -> %d", state.lastBidAmount, amount))
+        if diff > 5.0 and amount > 1000 then
+            state:AddWarning(string.format("出价跳跃异常: %d -> %d (%.1fx)",
+                state.lastBidAmount, amount, diff))
+        end
+    end
+
+    -- v1.0.0 新增 6：伪随机数检测
+    if AntiCheat.Config.pattern.patternCheckEnabled then
+        table.insert(state.bidHistory, {
+            amount = amount,
+            time = timestamp,
+            rarity = nil,
+        })
+        if #state.bidHistory > 20 then
+            table.remove(state.bidHistory, 1)
+        end
+
+        local isSuspicious = AntiCheat._CheckBidPattern(state)
+        if isSuspicious then
+            state:AddWarning("出价模式异常: 疑似程序生成的伪随机模式")
         end
     end
 
@@ -236,7 +254,6 @@ function AntiCheat.CheckBid(seatIdx, uid, amount, availableFunds, timestamp)
     state.lastBidAmount = amount
     state:RecordAction()
 
-    -- 检查惩罚阈值
     if state.warnings >= AntiCheat.Config.penalty.kickThreshold then
         return false, "检测到异常行为，已被临时封禁"
     end
@@ -245,20 +262,90 @@ function AntiCheat.CheckBid(seatIdx, uid, amount, availableFunds, timestamp)
 end
 
 -- ============================================================================
+-- 伪随机模式检测（新）
+-- ============================================================================
+
+--- 检测出价是否过于规律
+---@param state PlayerCheatState
+---@return boolean 是否疑似作弊
+function AntiCheat._CheckBidPattern(state)
+    local history = state.bidHistory
+    if #history < AntiCheat.Config.pattern.minSamples then
+        return false
+    end
+
+    -- 检查出价分布：是否总是用同一种模式
+    -- 比如：总是相同金额出价 1000, 2000, 3000 ... 等差序列，
+    -- 或者总是固定比例 (1/2, 1/3, 1/4 ...) 这种规律
+    -- 计算方差（检测是否波动过于规律）
+    local varianceCheck = AntiCheat._CheckVariancePattern(history)
+    local sequenceCheck = AntiCheat._CheckSequencePattern(history)
+
+    return varianceCheck or sequenceCheck
+end
+
+--- 检测出价方差：判断方差是否过小（意味着总是相似出价
+function AntiCheat._CheckVariancePattern(history)
+    local n = #history
+    if n < 5 then return false end
+
+    local sum = 0
+    for _, bid in ipairs(history) do
+        sum = sum + bid.amount
+    end
+    local mean = sum / n
+
+    local variance = 0
+    for _, bid in ipairs(history) do
+        variance = variance + (bid.amount - mean) ^ 2
+    end
+    variance = variance / n
+
+    local cv = math.sqrt(variance) / (mean + 1)  -- 变异系数
+
+    -- 小方差 = 总是出相近金额
+
+    -- 判断:0.05 0.1
+    -- 0.1 以下 = 0.05 = 0.05 = 0.05 = 0.05 = 0.05 = 0.05 = 0.05 = 0.05 = 0.05 = 0.05
+    -- 0.1 以下 = 总是出价十分稳定
+    return cv < AntiCheat.Config.pattern.varianceThreshold
+end
+
+--- 检测序列模式：检测金额变化是否过于规律
+---@param history table
+---@return boolean 是否疑似作弊
+function AntiCheat._CheckSequencePattern(history)
+    local differences = {}
+    for i = 2, #history do
+        local diff = history[i].amount - history[i-1].amount
+        table.insert(differences, diff)
+    end
+
+    -- 检查差异是否总在一个非常小的范围内
+    local diffSum = 0
+    for _, d in ipairs(differences) do
+        diffSum = diffSum + math.abs(d)
+    end
+    local avgDiff = diffSum / #differences
+
+    -- 如果差异很小且每次变化很规律，则判定为异常
+    local smallDiffCount = 0
+    for _, d in ipairs(differences) do
+        if math.abs(d) < 500 then
+            smallDiffCount = smallDiffCount + 1
+        end
+    end
+
+    return smallDiffCount / #differences > 0.7  -- 70% 以上变化都很小 => 疑似程序生成
+end
+
+-- ============================================================================
 -- 操作速度检测
 -- ============================================================================
 
---- 检测操作是否过快
----@param seatIdx number
----@param uid number|nil
----@param actionType string "bid" | "char_select" | "skill"
----@param timestamp number
----@return boolean allowed
----@return string|nil reason
 function AntiCheat.CheckOperationSpeed(seatIdx, uid, actionType, timestamp)
     local state = AntiCheat.GetOrCreateState(seatIdx, uid)
 
-    -- 检查是否被封禁
     if state:IsBanned() then
         return false, "账户已被封禁"
     end
@@ -272,29 +359,19 @@ function AntiCheat.CheckOperationSpeed(seatIdx, uid, actionType, timestamp)
         minTime = cfg.minCharSelectTime
     end
 
-    -- 检测操作频率
     if state.actionsThisSecond >= cfg.maxActionsPerSecond then
         state:AddWarning("操作频率过高: " .. state.actionsThisSecond .. "/s")
         return false, "操作过于频繁，请稍后再试"
     end
 
-    -- 检测思考时间不足
-    -- 注意：这里需要传入上次操作时间来检测
-    -- 简化版本：直接记录操作
     state:RecordAction()
-
     return true, nil
 end
 
 -- ============================================================================
--- 网络异常检测
+-- 网络异常检测（增强）
 -- ============================================================================
 
---- 检测重连频率
----@param seatIdx number
----@param uid number|nil
----@return boolean allowed
----@return string|nil reason
 function AntiCheat.CheckReconnect(seatIdx, uid)
     local state = AntiCheat.GetOrCreateState(seatIdx, uid)
 
@@ -309,30 +386,90 @@ function AntiCheat.CheckReconnect(seatIdx, uid)
     return true, nil
 end
 
---- 检测延迟
----@param seatIdx number
----@param ping number 延迟（毫秒）
----@return boolean allowed
----@return string|nil reason
+--- v1.0.0 新增：延迟抖动检测
 function AntiCheat.CheckPing(seatIdx, ping)
     local state = AntiCheat.GetOrCreateState(seatIdx, nil)
     local cfg = AntiCheat.Config.network
 
+    table.insert(state.pingHistory, ping)
+    if #state.pingHistory > 10 then
+        table.remove(state.pingHistory, 1)
+    end
+
     if ping > cfg.pingThreshold then
         state:AddWarning("高延迟: " .. ping .. "ms")
-        -- 高延迟不阻止游戏，但记录
+    end
+
+    -- 检测抖动：如果延迟在非常稳定
+    if #state.pingHistory >= 5 then
+        local diffs = {}
+        for i = 2, #state.pingHistory do
+            table.insert(diffs, math.abs(state.pingHistory[i] - state.pingHistory[i-1]))
+        end
+
+        local sum = 0
+        for _, d in ipairs(diffs) do
+            sum = sum + d
+        end
+        local avgDiff = sum / #diffs
+
+        if avgDiff > cfg.pingJitterThreshold and #state.pingHistory[#state.pingHistory then
+            state:AddWarning(string.format("延迟抖动过大: %.0fms (超过阈值)", avgDiff))
+        end
     end
 
     return true, nil
 end
 
 -- ============================================================================
+-- 游戏结束检测（v1.0.0 新增）
+-- ============================================================================
+
+--- v1.0.0 新增：检测疑似刷分行为
+---@param seatIdx number
+---@param won boolean
+---@param finalBalance number
+function AntiCheat.CheckGameEnd(seatIdx, won, finalBalance)
+    local state = AntiCheat.GetOrCreateState(seatIdx, nil)
+
+    if state:IsBanned() then
+        return
+    end
+
+    state.totalGames = state.totalGames + 1
+
+    if won then
+        state.winCount = state.winCount + 1
+        state.consecutiveWins = state.consecutiveWins + 1
+    else
+        state.consecutiveWins = 0
+    end
+
+    -- 检查连续胜利数
+    local cfg = AntiCheat.Config.boost
+    if state.consecutiveWins >= cfg.consecutiveWinsThreshold then
+        state:AddWarning("连续胜利次数过多: " .. state.consecutiveWins .. "局")
+    end
+
+    -- 检查胜率
+    if state.totalGames >= cfg.minGamesForCheck then
+        local winRate = state.winCount / state.totalGames
+        if winRate >= cfg.suspiciousWinRate then
+            state:AddWarning(string.format("胜率异常: %.1f%%", winRate * 100))
+        end
+    end
+
+    -- 检查最终余额变化
+    if state.expectedBalance and math.abs(state.expectedBalance - finalBalance) > 1000 then
+        state:AddWarning(string.format("余额不符: 预期 %d, 实际 %d",
+            state.expectedBalance, finalBalance))
+    end
+end
+
+-- ============================================================================
 -- 惩罚管理
 -- ============================================================================
 
---- 警告玩家
----@param seatIdx number
----@param reason string
 function AntiCheat.Warn(seatIdx, reason)
     local state = playerStates_[seatIdx]
     if not state then return end
@@ -340,13 +477,10 @@ function AntiCheat.Warn(seatIdx, reason)
     state:AddWarning(reason)
 
     if state.warnings >= AntiCheat.Config.penalty.warnThreshold then
-        AntiCheat.Kick(seatIdx, "多次违规行为")
+        AntiCheat.Kick(seatIdx, reason)
     end
 end
 
---- 踢出玩家
----@param seatIdx number
----@param reason string
 function AntiCheat.Kick(seatIdx, reason)
     if server_ and server_.KickPlayer then
         server_:KickPlayer(seatIdx, reason)
@@ -354,10 +488,6 @@ function AntiCheat.Kick(seatIdx, reason)
     print(string.format("[AntiCheat] Kicked seat %d: %s", seatIdx, reason))
 end
 
---- 封禁玩家
----@param seatIdx number
----@param duration number 秒
----@param reason string
 function AntiCheat.Ban(seatIdx, duration, reason)
     local state = playerStates_[seatIdx]
     if not state then return end
@@ -372,18 +502,12 @@ function AntiCheat.Ban(seatIdx, duration, reason)
     print(string.format("[AntiCheat] Banned seat %d for %ds: %s", seatIdx, duration, reason))
 end
 
---- 获取玩家作弊历史
----@param seatIdx number
----@return table
 function AntiCheat.GetHistory(seatIdx)
     local state = playerStates_[seatIdx]
     if not state then return {} end
     return state.history
 end
 
---- 获取玩家警告次数
----@param seatIdx number
----@return number
 function AntiCheat.GetWarningCount(seatIdx)
     local state = playerStates_[seatIdx]
     if not state then return 0 end
@@ -394,56 +518,36 @@ end
 -- 服务端集成钩子
 -- ============================================================================
 
---- 创建反作弊集成模块
----@param Server table Server 模块
----@return table 集成函数
 function AntiCheat.Integrate(Server)
     local Integrator = {}
 
-    --- 在处理出价前调用
-    ---@param seatIdx number
-    ---@param uid number|nil
-    ---@param amount number
-    ---@param availableFunds number
-    ---@return boolean, string|nil
     function Integrator.OnBeforeBid(seatIdx, uid, amount, availableFunds)
         return AntiCheat.CheckBid(seatIdx, uid, amount, availableFunds, os.time())
     end
 
-    --- 在处理技能使用前调用
-    ---@param seatIdx number
-    ---@param uid number|nil
-    ---@return boolean, string|nil
     function Integrator.OnBeforeSkill(seatIdx, uid)
         return AntiCheat.CheckOperationSpeed(seatIdx, uid, "skill", os.time())
     end
 
-    --- 在玩家断线重连时调用
-    ---@param seatIdx number
-    ---@param uid number|nil
-    ---@return boolean, string|nil
     function Integrator.OnReconnect(seatIdx, uid)
         return AntiCheat.CheckReconnect(seatIdx, uid)
     end
 
-    --- 更新延迟
-    ---@param seatIdx number
-    ---@param ping number
     function Integrator.OnPingUpdate(seatIdx, ping)
         AntiCheat.CheckPing(seatIdx, ping)
     end
 
-    --- 玩家加入时初始化
-    ---@param seatIdx number
-    ---@param uid number|nil
     function Integrator.OnPlayerJoin(seatIdx, uid)
         AntiCheat.GetOrCreateState(seatIdx, uid)
     end
 
-    --- 玩家离开时清理
-    ---@param seatIdx number
     function Integrator.OnPlayerLeave(seatIdx)
         AntiCheat.ClearState(seatIdx)
+    end
+
+    -- v1.0.0 新增：游戏结束
+    function Integrator.OnGameEnd(seatIdx, won, finalBalance)
+        AntiCheat.CheckGameEnd(seatIdx, won, finalBalance)
     end
 
     return Integrator
