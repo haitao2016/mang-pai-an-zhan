@@ -6,8 +6,8 @@ local Config = {}
 
 -- 游戏基本信息
 Config.Title = "盲拍暗战"
-Config.Version = "1.1.0"
-Config.ReleaseDate = "2026-07-19"
+Config.Version = "1.2.0"
+Config.ReleaseDate = "2026-08-19"
 Config.ScreenOrientation = "landscape"  -- 横屏（移动端更适合竞拍操作）
 
 -- ============================================================================
@@ -512,23 +512,190 @@ Config.ItemSets = {
 }
 
 -- ============================================================================
--- v1.1.0 版本信息更新
+-- v1.2.0 版本信息更新
 -- ============================================================================
-Config.Version = "1.1.0"
-Config.ReleaseDate = "2026-07-19"
+Config.Version = "1.2.0"
+Config.ReleaseDate = "2026-08-19"
 Config.ReleaseNotes = [=[
-v1.1.0 主要更新：
-  · 全新赛季系统（14 天周期，50 级通行证）
-  · 周挑战任务（3 个任务，奖励更丰厚）
-  · 新角色 ×4（神秘收藏家、风险投资人、心理学家、时间管理大师）
-  · 角色合作被动机制
-  · 藏品扩展 +100 件 + 2 个主题系列
-  · 限时活动模式：Blind Rush 极速竞拍
-  · 好友系统：在线状态、邀请组队
-  · 本地排行榜：5 种排名维度
-  · 玩家头像与称号系统
-  · UI/UX 优化：动画增强 + 布局调整
-  · 架构优化：EventBus + SystemManager 统一管理
+v1.2.0 主要更新：
+  · 锦标赛系统（单败淘汰制，8/16 人参赛）
+  · 2v2 团队战模式（组队对战，团队资金池）
+  · 藏品交易市场（玩家自由交易藏品）
+  · 角色皮肤系统（12 个角色皮肤，套装效果）
+  · 跨平台联机优化
+  · UI/UX 进一步优化
 ]=]
+
+-- ============================================================================
+-- v1.2.0 新增：锦标赛系统配置
+-- ============================================================================
+Config.Tournament = {
+    -- 赛制
+    Formats = {
+        { id = "single_elimination", name = "单败淘汰", teams = 8 },
+        { id = "double_elimination", name = "双败淘汰", teams = 8 },
+        { id = "swiss", name = "瑞士轮", teams = 8 }
+    },
+
+    -- 奖励配置
+    Rewards = {
+        { place = 1, percent = 50, title = "冠军" },
+        { place = 2, percent = 25, title = "亚军" },
+        { place = 3, percent = 12, title = "四强" },
+        { place = 5, percent = 6, title = "八强" },
+        { place = 9, percent = 4, title = "十六强" }
+    },
+
+    -- 锦标赛类型
+    Types = {
+        { id = "daily", name = "每日锦标赛", minPlayers = 8, prize = 5000, fee = 100 },
+        { id = "weekly", name = "周末杯赛", minPlayers = 16, prize = 20000, fee = 500 },
+        { id = "championship", name = "冠军赛", minPlayers = 64, prize = 100000, fee = 2000 }
+    }
+}
+
+-- ============================================================================
+-- v1.2.0 新增：团队战配置
+-- ============================================================================
+Config.TeamBattle = {
+    MaxTeamSize = 2,
+    MatchConfig = {
+        rounds = 5,
+        bidTimeLimit = 15,
+        initialBalance = 10000
+    },
+
+    -- 团队技能
+    TeamSkills = {
+        {
+            id = "team_rally",
+            name = "团队激励",
+            desc = "本回合所有成员出价 +10%",
+            cooldown = 2,
+            available = true
+        },
+        {
+            id = "team_shield",
+            name = "团队护盾",
+            desc = "本回合不受对方团队技能影响",
+            cooldown = 3,
+            available = true
+        },
+        {
+            id = "team_insight",
+            name = "团队洞察",
+            desc = "本回合可见对方总出价",
+            cooldown = 2,
+            available = true
+        }
+    },
+
+    -- 团队成就
+    TeamAchievements = {
+        { id = "first_blood", name = "首战告捷", desc = "赢得第一场团队战" },
+        { id = "team_10_wins", name = "团队新星", desc = "团队累计获得 10 场胜利" },
+        { id = "perfect_season", name = "完美赛季", desc = "单赛季团队无败绩" }
+    }
+}
+
+-- ============================================================================
+-- v1.2.0 新增：交易市场配置
+-- ============================================================================
+Config.Trade = {
+    -- 交易费用
+    FeeRate = 0.05,           -- 5% 手续费
+    MinPrice = 10,            -- 最低挂牌价
+    MaxPrice = 1000000,      -- 最高挂牌价
+
+    -- 限制
+    MaxListingsPerPlayer = 10,
+    MaxBlacklist = 20,
+    ListingExpireDays = 7,
+
+    -- 市场分类
+    Categories = {
+        { id = "all", name = "全部" },
+        { id = "eastern", name = "东方艺术" },
+        { id = "western", name = "西洋收藏" },
+        { id = "rare", name = "稀有专属" }
+    },
+
+    -- 排序选项
+    SortOptions = {
+        { id = "recent", name = "最新" },
+        { id = "price_asc", name = "价格升序" },
+        { id = "price_desc", name = "价格降序" },
+        { id = "rarity", name = "稀有度" }
+    }
+}
+
+-- ============================================================================
+-- v1.2.0 新增：角色皮肤配置
+-- ============================================================================
+Config.Skins = {
+    -- 角色 1 的皮肤
+    ["budget_master"] = {
+        {
+            id = "budget_master_default",
+            name = "默认",
+            rarity = 1,
+            description = "精打细算大师的经典装扮",
+            price = 0,
+            unlockCondition = "default"
+        },
+        {
+            id = "budget_master_gold",
+            name = "金色传说",
+            rarity = 4,
+            description = "金光闪闪的华丽装扮",
+            price = 2000,
+            unlockCondition = "purchase",
+            previewImage = "skin_preview_gold"
+        }
+    },
+
+    -- 通用皮肤（所有角色可用）
+    universal = {
+        {
+            id = "skin_holiday",
+            name = "节日限定",
+            rarity = 5,
+            description = "节日特别版皮肤",
+            price = 0,
+            unlockCondition = "event",
+            availableFrom = "2026-12-25",
+            availableTo = "2027-01-05"
+        },
+        {
+            id = "skin_season_1",
+            name = "第一赛季专属",
+            rarity = 5,
+            description = "第一赛季限定皮肤",
+            price = 0,
+            unlockCondition = "season_level",
+            requireSeasonLevel = 50
+        }
+    }
+}
+
+-- ============================================================================
+-- v1.2.0 新增：皮肤套装配置
+-- ============================================================================
+Config.SkinSets = {
+    {
+        id = "set_master",
+        name = "大师套装",
+        description = "集齐所有角色的大师皮肤",
+        skins = { "budget_master_gold", "time_master_gold" },
+        reward = { type = "gold", amount = 5000 }
+    },
+    {
+        id = "set_limited",
+        name = "限定套装",
+        description = "集齐所有限定皮肤",
+        skins = { "skin_holiday", "skin_season_1" },
+        reward = { type = "title", id = "T100" }
+    }
+}
 
 return Config

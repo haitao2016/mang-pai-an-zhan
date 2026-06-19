@@ -509,16 +509,57 @@ function GameUI._BuildLobbyPanel()
     local navBar = UI.Panel {
         width = "100%",
         flexDirection = "row",
+        flexWrap = "wrap",
         gap = 6,
         children = {
             UI.Button {
                 text = "🏛️ 收藏馆",
-                fontSize = 12,
+                fontSize = 11,
                 variant = "ghost",
                 flexGrow = 1,
-                height = 38,
+                height = 36,
                 onClick = function()
                     GameUI._ShowCollection()
+                end,
+            },
+            UI.Button {
+                text = "🏆 锦标赛",
+                fontSize = 11,
+                variant = "ghost",
+                flexGrow = 1,
+                height = 36,
+                onClick = function()
+                    GameUI._ShowTournament()
+                end,
+            },
+            UI.Button {
+                text = "👥 团队战",
+                fontSize = 11,
+                variant = "ghost",
+                flexGrow = 1,
+                height = 36,
+                onClick = function()
+                    GameUI._ShowTeamBattle()
+                end,
+            },
+            UI.Button {
+                text = "🛒 市场",
+                fontSize = 11,
+                variant = "ghost",
+                flexGrow = 1,
+                height = 36,
+                onClick = function()
+                    GameUI._ShowTradeMarket()
+                end,
+            },
+            UI.Button {
+                text = "🎨 皮肤",
+                fontSize = 11,
+                variant = "ghost",
+                flexGrow = 1,
+                height = 36,
+                onClick = function()
+                    GameUI._ShowSkinShop()
                 end,
             },
         },
@@ -1526,6 +1567,277 @@ function GameUI._ShowProfile()
     stateLabel_.text = "个人中心"
 end
 
+-- ============================================================================
+-- v1.2.0 新系统面板
+-- ============================================================================
+
+function GameUI._ShowTournament()
+    local TournamentSystem = safeRequire("Game.TournamentSystem")
+    if not TournamentSystem then
+        GameUI._ShowToast("锦标赛系统加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    local playerId = client_ and client_.playerId_ or "default"
+    local available = TournamentSystem.GetAvailableTournaments(playerId)
+    local history = TournamentSystem.GetPlayerHistory(playerId)
+
+    -- 创建锦标赛面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "🏆 锦标赛",
+                fontSize = 20, fontColor = rgba(C.Accent),
+                fontWeight = "bold", marginTop = 20, marginLeft = 20
+            },
+            -- 可参加锦标赛数
+            UI.Label {
+                text = string.format("可参加: %d 场", #available),
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 分割线
+            UI.Divider { color = rgba(C.Primary, 40), spacing = 8, marginTop = 10 },
+            -- 锦标赛列表
+            UI.Label {
+                text = "暂无正在报名的锦标赛",
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowHallSelect()
+                end
+            }
+        }
+    }
+
+    if not GameUI._tournamentPanel then
+        GameUI._tournamentPanel = panel
+        root_:AddChild(panel)
+    else
+        GameUI._tournamentPanel:Hide()
+        GameUI._tournamentPanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "锦标赛中心"
+end
+
+function GameUI._ShowTeamBattle()
+    local TeamBattleSystem = safeRequire("Game.TeamBattleSystem")
+    if not TeamBattleSystem then
+        GameUI._ShowToast("团队战系统加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    local playerId = client_ and client_.playerId_ or "default"
+    local team = TeamBattleSystem.GetPlayerTeam(playerId)
+
+    -- 创建团队战面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "👥 团队战",
+                fontSize = 20, fontColor = rgba(C.Accent),
+                fontWeight = "bold", marginTop = 20, marginLeft = 20
+            },
+            -- 团队状态
+            UI.Label {
+                text = team and ("团队: " .. team.name) or "未加入团队",
+                fontSize = 14, fontColor = rgba(C.TextPrimary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 分割线
+            UI.Divider { color = rgba(C.Primary, 40), spacing = 8, marginTop = 10 },
+            -- 团队信息
+            UI.Label {
+                text = "2v2 组队对战，与队友协作赢得比赛",
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 20, marginLeft = 20
+            },
+            -- 团队技能说明
+            UI.Label {
+                text = "团队技能: 团队激励 / 团队护盾 / 团队洞察",
+                fontSize = 11, fontColor = rgba(C.Secondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowHallSelect()
+                end
+            }
+        }
+    }
+
+    if not GameUI._teambattlePanel then
+        GameUI._teambattlePanel = panel
+        root_:AddChild(panel)
+    else
+        GameUI._teambattlePanel:Hide()
+        GameUI._teambattlePanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "团队战中心"
+end
+
+function GameUI._ShowTradeMarket()
+    local TradeSystem = safeRequire("Game.TradeSystem")
+    if not TradeSystem then
+        GameUI._ShowToast("交易市场加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    local stats = TradeSystem.GetMarketStats()
+
+    -- 创建交易市场面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "🛒 交易市场",
+                fontSize = 20, fontColor = rgba(C.Accent),
+                fontWeight = "bold", marginTop = 20, marginLeft = 20
+            },
+            -- 市场统计
+            UI.Label {
+                text = string.format("在售: %d 件 | 今日成交: %d 笔",
+                    stats.activeListings, stats.todayTrades),
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 分割线
+            UI.Divider { color = rgba(C.Primary, 40), spacing = 8, marginTop = 10 },
+            -- 手续费信息
+            UI.Label {
+                text = string.format("手续费: %.0f%%", TradeSystem.Config.feeRate * 100),
+                fontSize = 11, fontColor = rgba(C.Secondary),
+                marginTop = 10, marginLeft = 20
+            },
+            -- 提示
+            UI.Label {
+                text = "在收藏馆中点击「上架」可将藏品出售到市场",
+                fontSize = 11, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowHallSelect()
+                end
+            }
+        }
+    }
+
+    if not GameUI._tradePanel then
+        GameUI._tradePanel = panel
+        root_:AddChild(panel)
+    else
+        GameUI._tradePanel:Hide()
+        GameUI._tradePanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "交易市场"
+end
+
+function GameUI._ShowSkinShop()
+    local SkinSystem = safeRequire("Game.SkinSystem")
+    if not SkinSystem then
+        GameUI._ShowToast("皮肤系统加载中...", "WARNING")
+        return
+    end
+
+    GameUI._HideAllPanels()
+
+    local playerId = client_ and client_.playerId_ or "default"
+    local stats = SkinSystem.GetPlayerStats(playerId)
+
+    -- 创建皮肤商店面板
+    local panel = UI.Panel {
+        width = "100%", height = "100%",
+        backgroundColor = rgba({20, 20, 20}, 220),
+        children = {
+            -- 标题
+            UI.Label {
+                text = "🎨 皮肤商店",
+                fontSize = 20, fontColor = rgba(C.Accent),
+                fontWeight = "bold", marginTop = 20, marginLeft = 20
+            },
+            -- 皮肤统计
+            UI.Label {
+                text = string.format("已解锁: %d 个皮肤", stats.totalUnlocked),
+                fontSize = 12, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 分割线
+            UI.Divider { color = rgba(C.Primary, 40), spacing = 8, marginTop = 10 },
+            -- 稀有度说明
+            UI.Label {
+                text = "稀有度: 普通 → 稀有 → 史诗 → 传说 → 独占",
+                fontSize = 11, fontColor = rgba(C.Secondary),
+                marginTop = 10, marginLeft = 20
+            },
+            -- 套装提示
+            UI.Label {
+                text = "收集完整套装可领取额外奖励",
+                fontSize = 11, fontColor = rgba(C.TextSecondary),
+                marginTop = 5, marginLeft = 20
+            },
+            -- 返回按钮
+            UI.Button {
+                text = "🔙 返回",
+                width = 100, height = 36,
+                marginTop = 20, marginLeft = 20,
+                onClick = function()
+                    GameUI._ShowHallSelect()
+                end
+            }
+        }
+    }
+
+    if not GameUI._skinPanel then
+        GameUI._skinPanel = panel
+        root_:AddChild(panel)
+    else
+        GameUI._skinPanel:Hide()
+        GameUI._skinPanel = panel
+        root_:AddChild(panel)
+    end
+
+    panel:Show()
+    stateLabel_.text = "皮肤商店"
+end
+
 function GameUI._ShowCharSelect()
     GameUI._HideAllPanels()
     charSelectPanel_:Show()
@@ -2380,10 +2692,14 @@ function GameUI._BuildHallSelectPanel()
     local menuItems = {
         { icon = "🔨", label = "拍卖大厅", active = true },
         { icon = "🏛️", label = "收藏馆",   action = "collection" },
-        { icon = "📋", label = "每日任务", action = "missions", badge = true },     -- v1.1.0
-        { icon = "🏆", label = "赛季",     action = "season", badge = true },       -- v1.1.0
-        { icon = "👥", label = "好友",     action = "friends" },                    -- v1.1.0
-        { icon = "👤", label = "个人",     action = "profile" },                  -- v1.1.0
+        { icon = "🏆", label = "锦标赛",   action = "tournament" },  -- v1.2.0
+        { icon = "👥", label = "团队战",   action = "teambattle" }, -- v1.2.0
+        { icon = "🛒", label = "交易市场", action = "trade" },     -- v1.2.0
+        { icon = "🎨", label = "皮肤商店", action = "skin" },     -- v1.2.0
+        { icon = "📋", label = "每日任务", action = "missions" },  -- v1.1.0
+        { icon = "🏆", label = "赛季",     action = "season" },    -- v1.1.0
+        { icon = "👥", label = "好友",     action = "friends" },   -- v1.1.0
+        { icon = "👤", label = "个人",     action = "profile" },   -- v1.1.0
         { icon = "🔙", label = "返回大厅", action = "lobby" },
     }
     local menuChildren = {}
@@ -2402,9 +2718,17 @@ function GameUI._BuildHallSelectPanel()
             onClick = function()
                 if item.action == "collection" then
                     GameUI._ShowCollection()
-                elseif item.action == "missions" then        -- v1.1.0
+                elseif item.action == "tournament" then     -- v1.2.0
+                    GameUI._ShowTournament()
+                elseif item.action == "teambattle" then    -- v1.2.0
+                    GameUI._ShowTeamBattle()
+                elseif item.action == "trade" then         -- v1.2.0
+                    GameUI._ShowTradeMarket()
+                elseif item.action == "skin" then          -- v1.2.0
+                    GameUI._ShowSkinShop()
+                elseif item.action == "missions" then      -- v1.1.0
                     GameUI._ShowMissions()
-                elseif item.action == "season" then         -- v1.1.0
+                elseif item.action == "season" then        -- v1.1.0
                     GameUI._ShowSeason()
                 elseif item.action == "friends" then        -- v1.1.0
                     GameUI._ShowFriends()
